@@ -1,0 +1,63 @@
+import { Color } from "../types/color";
+import { PieceState } from "../types/piecestate";
+import { PieceType } from "../types/piecetype";
+import { Position } from "../types/position";
+
+export abstract class Piece {
+
+    private readonly _color: Color;
+    private _position: Position;
+    private _state: PieceState = {
+        hasMoved: false,
+        isCaptured: false,
+        isPromoted: false
+    };
+
+    public constructor(color: Color, position: Position) {
+        this._color = color;
+        this._position = position;
+    }
+
+    public abstract get type(): PieceType;
+
+    public abstract getPseudoLegalMoves(): Position[];
+
+    public abstract copy(): Piece;
+
+    public isActive(): boolean {
+        return !this._state.isCaptured && !this._state.isPromoted;
+    }
+
+    public moveTo(position: Position): void {
+        this.setPosition(position);
+        this._state.hasMoved = true;
+    }
+
+    public capture(): void {
+        this._state.isCaptured = true;
+    }
+
+    public promote(): void {
+        this._state.isPromoted = true;
+    }
+
+    public get state(): PieceState {
+        return { ...this._state };
+    }
+
+    public setState(value: PieceState) {
+        this._state = value;
+    }
+
+    public get position(): Position {
+        return { ...this._position };
+    }
+
+    protected setPosition(value: Position) {
+        this._position = value;
+    }
+
+    public get color(): Color {
+        return this._color;
+    }
+}
