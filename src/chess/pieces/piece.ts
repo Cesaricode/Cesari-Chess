@@ -22,7 +22,7 @@ export abstract class Piece {
 
     public abstract getPseudoLegalMoves(): Position[];
 
-    public abstract copy(): Piece;
+    public abstract clone(): Piece;
 
     public isActive(): boolean {
         return !this._state.isCaptured && !this._state.isPromoted;
@@ -45,7 +45,7 @@ export abstract class Piece {
         return { ...this._state };
     }
 
-    public setState(value: PieceState) {
+    public setState(value: PieceState): void {
         this._state = value;
     }
 
@@ -53,7 +53,7 @@ export abstract class Piece {
         return { ...this._position };
     }
 
-    protected setPosition(value: Position) {
+    protected setPosition(value: Position): void {
         this._position = value;
     }
 

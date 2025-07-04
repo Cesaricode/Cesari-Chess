@@ -2,10 +2,10 @@ import { Color } from "../types/color";
 import { PieceType } from "../types/piecetype";
 import { Position } from "../types/position";
 import { Piece } from "./piece";
-import { ROOK_DIRECTIONS } from "../constants/directions";
+import { BISHOP_DIRECTIONS } from "../constants/directions";
 import { isWithinBoard } from "../util/board-utils";
 
-export class Rook extends Piece {
+export class Bishop extends Piece {
 
     public constructor(color: Color, position: Position) {
         super(color, position);
@@ -14,7 +14,7 @@ export class Rook extends Piece {
     public getPseudoLegalMoves(): Position[] {
         const returnValue: Position[] = [];
 
-        for (const direction of ROOK_DIRECTIONS) {
+        for (const direction of BISHOP_DIRECTIONS) {
             let x: number = this.position.x + direction.x;
             let y: number = this.position.y + direction.y;
             while (isWithinBoard({ x, y })) {
@@ -28,11 +28,11 @@ export class Rook extends Piece {
     }
 
     public get type(): PieceType {
-        return PieceType.Rook;
+        return PieceType.Bishop;
     }
 
-    public copy(): Rook {
-        const clone: Rook = new Rook(this.color, { ...this.position });
+    public clone(): Bishop {
+        const clone: Bishop = new Bishop(this.color, { ...this.position });
         clone.setState({ ...this.state });
         return clone;
     }

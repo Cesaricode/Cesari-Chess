@@ -31,7 +31,7 @@ export class Queen extends Piece {
         return PieceType.Queen;
     }
 
-    public copy(): Queen {
+    public clone(): Queen {
         const clone: Queen = new Queen(this.color, { ...this.position });
         clone.setState({ ...this.state });
         return clone;

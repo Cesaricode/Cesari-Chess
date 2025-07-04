@@ -44,7 +44,7 @@ export class Pawn extends Piece {
         return PieceType.Pawn;
     }
 
-    public copy(): Pawn {
+    public clone(): Pawn {
         const clone: Pawn = new Pawn(this.color, { ...this.position });
         clone.setState({ ...this.state });
         return clone;
