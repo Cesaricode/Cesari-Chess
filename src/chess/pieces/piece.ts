@@ -7,7 +7,7 @@ export abstract class Piece {
 
     private readonly _color: Color;
     private _position: Position;
-    private _state: PieceState = {
+    protected _state: PieceState = {
         hasMoved: false,
         isCaptured: false,
         isPromoted: false
@@ -35,10 +35,6 @@ export abstract class Piece {
 
     public capture(): void {
         this._state.isCaptured = true;
-    }
-
-    public promote(): void {
-        this._state.isPromoted = true;
     }
 
     public get state(): PieceState {

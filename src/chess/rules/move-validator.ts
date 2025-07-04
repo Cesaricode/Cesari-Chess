@@ -190,6 +190,7 @@ export class MoveValidator {
     }
 
     private static validateCastleMove(game: Game, move: Move): boolean {
+        if (game.isKingInCheck(move.color)) return false;
         const isKingSide: boolean = move.to.x > move.from.x;
         const y: number = move.from.y;
 
@@ -287,7 +288,7 @@ export class MoveValidator {
         return true;
     }
 
-    private static isSquareAttacked(game: Game, pos: Position, byColor: Color): boolean {
+    public static isSquareAttacked(game: Game, pos: Position, byColor: Color): boolean {
         for (const piece of game.board.getPiecesByColor(byColor)) {
             if (!piece.isActive()) continue;
             const move: Move = {

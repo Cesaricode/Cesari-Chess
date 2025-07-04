@@ -1,6 +1,9 @@
 import { BOARD_HEIGHT, BOARD_WIDTH } from "../constants/board";
+import { Pawn } from "../pieces/pawn";
 import { Piece } from "../pieces/piece";
+import { PieceFactory } from "../pieces/piece-factory";
 import { Color } from "../types/color";
+import { PieceType } from "../types/piece-type";
 import { Position } from "../types/position";
 
 export class Board {
@@ -34,11 +37,22 @@ export class Board {
 
     public movePiece(from: Position, to: Position): void {
         const piece: Piece | null = this.getPieceAt(from);
-        this.setPieceAt(from, null);
         if (piece) {
+            this.setPieceAt(from, null);
+            this.setPieceAt(to, piece);
             piece.moveTo(to);
         }
-        this.setPieceAt(to, piece);
+    }
+
+    public promotePawn(from: Position, to: Position, promotion: PieceType): void {
+        const pawn: Pawn | null = this.getPieceAt(from) as Pawn | null;
+        if (!pawn || pawn.type !== PieceType.Pawn) return;
+
+        this.setPieceAt(from, null);
+        pawn.promote();
+
+        const promoted = PieceFactory.create(promotion, pawn.color, to);
+        this.setPieceAt(to, promoted);
     }
 
     public getAllPieces(): Piece[] {

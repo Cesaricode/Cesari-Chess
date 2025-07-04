@@ -49,4 +49,8 @@ export class Pawn extends Piece {
         clone.setState({ ...this.state });
         return clone;
     }
+
+    public promote(): void {
+        this._state.isPromoted = true;
+    }
 }
