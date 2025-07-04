@@ -1,9 +1,9 @@
-import { Color } from "../types/color";
-import { PieceType } from "../types/piece-type";
-import { Position } from "../types/position";
-import { Piece } from "./piece";
-import { PAWN_CAPTURE_DIRECTIONS, PAWN_MOVE_DIRECTIONS } from "../constants/directions";
-import { isWithinBoard } from "../util/board-utils";
+import { Color } from "../types/color.js";
+import { PieceType } from "../types/piece-type.js";
+import { Position } from "../types/position.js";
+import { Piece } from "./piece.js";
+import { PAWN_CAPTURE_DIRECTIONS, PAWN_MOVE_DIRECTIONS } from "../constants/directions.js";
+import { isWithinBoard } from "../util/board-utils.js";
 
 export class Pawn extends Piece {
 

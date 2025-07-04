@@ -1,7 +1,7 @@
-import { Piece } from "../pieces/piece";
-import { FEN } from "../util/fen";
-import { createStartingPieces } from "../util/starting-pieces";
-import { Board } from "./board";
+import { Piece } from "../pieces/piece.js";
+import { FEN } from "../util/fen.js";
+import { createStartingPieces } from "../util/starting-pieces.js";
+import { Board } from "./board.js";
 
 export class BoardFactory {
 

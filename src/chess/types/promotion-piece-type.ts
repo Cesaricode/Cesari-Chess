@@ -1,4 +1,4 @@
-import { PieceType } from "./piece-type";
+import { PieceType } from "./piece-type.js";
 
 export type PromotionPieceType =
     | PieceType.Queen

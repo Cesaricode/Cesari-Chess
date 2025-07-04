@@ -1,5 +1,5 @@
-import { Position } from "../types/position";
-import { BOARD_WIDTH, BOARD_HEIGHT } from "../constants/board";
+import { Position } from "../types/position.js";
+import { BOARD_WIDTH, BOARD_HEIGHT } from "../constants/board.js";
 
 export function isWithinBoard(pos: Position): boolean {
     return (

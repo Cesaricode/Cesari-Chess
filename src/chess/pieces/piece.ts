@@ -1,7 +1,7 @@
-import { Color } from "../types/color";
-import { PieceState } from "../types/piece-state";
-import { PieceType } from "../types/piece-type";
-import { Position } from "../types/position";
+import { Color } from "../types/color.js";
+import { PieceState } from "../types/piece-state.js";
+import { PieceType } from "../types/piece-type.js";
+import { Position } from "../types/position.js";
 
 export abstract class Piece {
 

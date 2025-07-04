@@ -1,7 +1,7 @@
-import { Position } from "./position";
-import { PieceType } from "./piece-type";
-import { Color } from "./color";
-import { PromotionPieceType } from "./promotion-piece-type";
+import { Position } from "./position.js";
+import { PieceType } from "./piece-type.js";
+import { Color } from "./color.js";
+import { PromotionPieceType } from "./promotion-piece-type.js";
 
 export interface Move {
     from: Position;

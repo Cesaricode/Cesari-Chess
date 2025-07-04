@@ -1,10 +1,10 @@
-import { BOARD_HEIGHT, BOARD_WIDTH } from "../constants/board";
-import { Pawn } from "../pieces/pawn";
-import { Piece } from "../pieces/piece";
-import { PieceFactory } from "../pieces/piece-factory";
-import { Color } from "../types/color";
-import { PieceType } from "../types/piece-type";
-import { Position } from "../types/position";
+import { BOARD_HEIGHT, BOARD_WIDTH } from "../constants/board.js";
+import { Pawn } from "../pieces/pawn.js";
+import { Piece } from "../pieces/piece.js";
+import { PieceFactory } from "../pieces/piece-factory.js";
+import { Color } from "../types/color.js";
+import { PieceType } from "../types/piece-type.js";
+import { Position } from "../types/position.js";
 
 export class Board {
 

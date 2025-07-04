@@ -2,6 +2,7 @@
 	"name": "cesari-chess",
 	"version": "1.0.0",
 	"main": "index.js",
+	"type": "module",
 	"scripts": {
 		"start": "npx http-server docs",
 		"build": "tsc --noImplicitAny -p .",

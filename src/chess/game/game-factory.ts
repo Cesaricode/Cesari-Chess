@@ -1,7 +1,7 @@
-import { Board } from "../board/board";
-import { BoardFactory } from "../board/board-factory";
-import { FEN } from "../util/fen";
-import { Game } from "./game";
+import { Board } from "../board/board.js";
+import { BoardFactory } from "../board/board-factory.js";
+import { FEN } from "../util/fen.js";
+import { Game } from "./game.js";
 
 export class GameFactory {
 

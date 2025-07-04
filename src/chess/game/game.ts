@@ -1,15 +1,15 @@
-import { Board } from "../board/board";
-import { ChessClock } from "../clock/clock";
-import { King } from "../pieces/king";
-import { Piece } from "../pieces/piece";
-import { MoveValidator } from "../rules/move-validator";
-import { CastlingRights } from "../types/castling-rights";
-import { Color } from "../types/color";
-import { GameState } from "../types/game-state";
-import { GameStatus } from "../types/game-status";
-import { Move } from "../types/move";
-import { PieceType } from "../types/piece-type";
-import { Position } from "../types/position";
+import { Board } from "../board/board.js";
+import { ChessClock } from "../clock/clock.js";
+import { King } from "../pieces/king.js";
+import { Piece } from "../pieces/piece.js";
+import { MoveValidator } from "../rules/move-validator.js";
+import { CastlingRights } from "../types/castling-rights.js";
+import { Color } from "../types/color.js";
+import { GameState } from "../types/game-state.js";
+import { GameStatus } from "../types/game-status.js";
+import { Move } from "../types/move.js";
+import { PieceType } from "../types/piece-type.js";
+import { Position } from "../types/position.js";
 
 export class Game implements GameState {
 
@@ -42,10 +42,15 @@ export class Game implements GameState {
             return false;
         }
 
+        if (move.color !== this.activeColor) {
+            return false;
+        }
+
         this.applyMoveToBoard(move);
 
         this.updateCastlingRights(move);
         this.updateHalfmoveClock(move);
+        this.setEnPassantTarget(move);
         this.updateFullmoveNumber();
         this.updateGameStatus();
         this.switchActiveColor();
@@ -163,6 +168,20 @@ export class Game implements GameState {
 
     private switchActiveColor(): void {
         this.activeColor = this.activeColor === Color.White ? Color.Black : Color.White;
+    }
+
+    private setEnPassantTarget(move: Move): void {
+        if (
+            move.piece === PieceType.Pawn &&
+            Math.abs(move.to.y - move.from.y) === 2
+        ) {
+            this.enPassantTarget = {
+                x: move.from.x,
+                y: (move.from.y + move.to.y) / 2
+            };
+        } else {
+            this.enPassantTarget = null;
+        }
     }
 
     private addToMoveHistory(move: Move): void {

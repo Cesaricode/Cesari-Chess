@@ -1,14 +1,14 @@
-import { PieceType } from "../types/piece-type";
-import { Color } from "../types/color";
-import { Position } from "../types/position";
-import { Pawn } from "./pawn";
-import { Queen } from "./queen";
-import { Rook } from "./rook";
-import { Bishop } from "./bishop";
-import { Knight } from "./knight";
-import { King } from "./king";
-import { Piece } from "./piece";
-import { PieceConstructor } from "../types/piece-constructor";
+import { PieceType } from "../types/piece-type.js";
+import { Color } from "../types/color.js";
+import { Position } from "../types/position.js";
+import { Pawn } from "./pawn.js";
+import { Queen } from "./queen.js";
+import { Rook } from "./rook.js";
+import { Bishop } from "./bishop.js";
+import { Knight } from "./knight.js";
+import { King } from "./king.js";
+import { Piece } from "./piece.js";
+import { PieceConstructor } from "../types/piece-constructor.js";
 
 export class PieceFactory {
 

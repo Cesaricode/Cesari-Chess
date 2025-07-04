@@ -1,13 +1,13 @@
-import { FEN_PIECE_SYMBOLS } from "../constants/fen";
-import { BOARD_WIDTH, BOARD_HEIGHT } from "../constants/board";
-import { Piece } from "../pieces/piece";
-import { PieceFactory } from "../pieces/piece-factory";
-import { Color } from "../types/color";
-import { PieceType } from "../types/piece-type";
-import { Position } from "../types/position";
-import { Board } from "../board/board";
-import { CastlingRights } from "../types/castling-rights";
-import { GameState } from "../types/game-state";
+import { FEN_PIECE_SYMBOLS } from "../constants/fen.js";
+import { BOARD_WIDTH, BOARD_HEIGHT } from "../constants/board.js";
+import { Piece } from "../pieces/piece.js";
+import { PieceFactory } from "../pieces/piece-factory.js";
+import { Color } from "../types/color.js";
+import { PieceType } from "../types/piece-type.js";
+import { Position } from "../types/position.js";
+import { Board } from "../board/board.js";
+import { CastlingRights } from "../types/castling-rights.js";
+import { GameState } from "../types/game-state.js";
 
 export class FEN {
 
