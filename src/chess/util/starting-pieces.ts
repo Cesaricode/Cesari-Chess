@@ -1,7 +1,7 @@
 import { Piece } from "../pieces/piece";
 import { PieceFactory } from "../pieces/piece-factory";
 import { Color } from "../types/color";
-import { PieceType } from "../types/piecetype";
+import { PieceType } from "../types/piece-type";
 
 export function createStartingPieces(): Piece[] {
 

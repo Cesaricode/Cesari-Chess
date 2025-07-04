@@ -1,5 +1,5 @@
 import { Color } from "../types/color";
-import { PieceType } from "../types/piecetype";
+import { PieceType } from "../types/piece-type";
 import { Position } from "../types/position";
 import { Piece } from "./piece";
 import { PAWN_CAPTURE_DIRECTIONS, PAWN_MOVE_DIRECTIONS } from "../constants/directions";

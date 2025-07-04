@@ -1,6 +1,6 @@
 import { Color } from "../types/color";
-import { PieceState } from "../types/piecestate";
-import { PieceType } from "../types/piecetype";
+import { PieceState } from "../types/piece-state";
+import { PieceType } from "../types/piece-type";
 import { Position } from "../types/position";
 
 export abstract class Piece {

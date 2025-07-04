@@ -3,11 +3,11 @@ import { BOARD_WIDTH, BOARD_HEIGHT } from "../constants/board";
 import { Piece } from "../pieces/piece";
 import { PieceFactory } from "../pieces/piece-factory";
 import { Color } from "../types/color";
-import { PieceType } from "../types/piecetype";
+import { PieceType } from "../types/piece-type";
 import { Position } from "../types/position";
 import { Board } from "../board/board";
 import { CastlingRights } from "../types/castling-rights";
-import { GameState } from "../types/gamestate";
+import { GameState } from "../types/game-state";
 
 export class FEN {
 

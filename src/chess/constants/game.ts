@@ -1,4 +1,4 @@
-import { PieceType } from "../types/piecetype";
+import { PieceType } from "../types/piece-type";
 
 export const FIFTY_MOVE_RULE_LIMIT: number = 50;
 export const SEVENTYFIVE_MOVE_RULE_LIMIT: number = 75;

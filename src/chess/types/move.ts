@@ -1,5 +1,5 @@
 import { Position } from "./position";
-import { PieceType } from "./piecetype";
+import { PieceType } from "./piece-type";
 import { Color } from "./color";
 
 export interface Move {

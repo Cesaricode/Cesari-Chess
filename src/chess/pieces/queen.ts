@@ -1,5 +1,5 @@
 import { Color } from "../types/color";
-import { PieceType } from "../types/piecetype";
+import { PieceType } from "../types/piece-type";
 import { Position } from "../types/position";
 import { Piece } from "./piece";
 import { QUEEN_DIRECTIONS } from "../constants/directions";

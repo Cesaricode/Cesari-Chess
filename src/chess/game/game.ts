@@ -1,22 +1,21 @@
 import { Board } from "../board/board";
 import { ChessClock } from "../clock/clock";
+import { Piece } from "../pieces/piece";
 import { MoveValidator } from "../rules/move-validator";
 import { CastlingRights } from "../types/castling-rights";
 import { Color } from "../types/color";
-import { GameState } from "../types/gamestate";
-import { GameStatus } from "../types/gamestatus";
+import { GameState } from "../types/game-state";
+import { GameStatus } from "../types/game-status";
 import { Move } from "../types/move";
+import { PieceType } from "../types/piece-type";
 import { Position } from "../types/position";
 
 export class Game implements GameState {
 
     private _board: Board;
     private _clock: ChessClock;
-
     private _status: GameStatus = GameStatus.Ongoing;
-
     private _moveHistory: Move[] = [];
-    private _moveValidator: MoveValidator;
 
     private gameState: GameState = {
         activeColor: Color.White,
@@ -34,7 +33,6 @@ export class Game implements GameState {
     public constructor(board?: Board, clock?: ChessClock) {
         this._board = board ?? new Board();
         this._clock = clock ?? new ChessClock();
-        this._moveValidator = new MoveValidator();
     }
 
     public get board(): Board { return this._board; }
@@ -61,10 +59,64 @@ export class Game implements GameState {
     public get fullmoveNumber(): number { return this.gameState.fullmoveNumber; }
     public set fullmoveNumber(value: number) { this.gameState.fullmoveNumber = value; }
 
-
     private assertOngoing(): void {
         if (this._status !== GameStatus.Ongoing) {
             throw new Error('Can not complete action: game is not ongoing.');
         }
+    }
+
+    public clone(): Game {
+        const clonedBoard: Board = this._board.clone();
+        const clonedClock: ChessClock = this._clock.clone();
+
+        const clonedGame: Game = new Game(clonedBoard, clonedClock);
+
+        clonedGame._status = this._status;
+        clonedGame._moveHistory = this._moveHistory.map(m => ({ ...m }));
+
+        clonedGame.gameState = {
+            activeColor: this.gameState.activeColor,
+            enPassantTarget: this.gameState.enPassantTarget
+                ? { ...this.gameState.enPassantTarget }
+                : null,
+            halfmoveClock: this.gameState.halfmoveClock,
+            fullmoveNumber: this.gameState.fullmoveNumber,
+            castlingRights: { ...this.gameState.castlingRights }
+        };
+
+        return clonedGame;
+    }
+
+    public simulateMove(move: Move): Game {
+        const clone: Game = this.clone();
+
+        clone.board.movePiece(move.from, move.to);
+
+        const movedPiece: Piece | null = clone.board.getPieceAt(move.to);
+        if (movedPiece && movedPiece.type === PieceType.Pawn && Math.abs(move.to.y - move.from.y) === 2) {
+            clone.enPassantTarget = { x: move.from.x, y: (move.from.y + move.to.y) / 2 };
+        } else {
+            clone.enPassantTarget = null;
+        }
+
+        if (movedPiece && movedPiece.type === PieceType.King) {
+            if (movedPiece.color === Color.White) {
+                clone.castlingRights.whiteKingSide = false;
+                clone.castlingRights.whiteQueenSide = false;
+            } else {
+                clone.castlingRights.blackKingSide = false;
+                clone.castlingRights.blackQueenSide = false;
+            }
+        }
+        if (movedPiece && movedPiece.type === PieceType.Rook) {
+            if (movedPiece.color === Color.White) {
+                if (move.from.x === 0 && move.from.y === 0) clone.castlingRights.whiteQueenSide = false;
+                if (move.from.x === 7 && move.from.y === 0) clone.castlingRights.whiteKingSide = false;
+            } else {
+                if (move.from.x === 0 && move.from.y === 7) clone.castlingRights.blackQueenSide = false;
+                if (move.from.x === 7 && move.from.y === 7) clone.castlingRights.blackKingSide = false;
+            }
+        }
+        return clone;
     }
 }
