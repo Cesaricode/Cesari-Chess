@@ -115,4 +115,11 @@ export class FEN {
             blackQueenSide: castling.includes("q"),
         };
     }
+    static getRepetitionFEN(game) {
+        const boardPart = FEN.serializeBoardToFEN(game.board);
+        const activeColor = game.activeColor === Color.White ? "w" : "b";
+        const castling = FEN.castlingObjectToString(game.castlingRights);
+        const enPassant = game.enPassantTarget ? FEN.positionToString(game.enPassantTarget) : "-";
+        return [boardPart, activeColor, castling, enPassant].join(" ");
+    }
 }

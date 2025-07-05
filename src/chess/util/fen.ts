@@ -8,6 +8,7 @@ import { Position } from "../types/position.js";
 import { Board } from "../board/board.js";
 import { CastlingRights } from "../types/castling-rights.js";
 import { GameState } from "../types/game-state.js";
+import { Game } from "../game/game.js";
 
 export class FEN {
 
@@ -117,5 +118,13 @@ export class FEN {
             blackKingSide: castling.includes("k"),
             blackQueenSide: castling.includes("q"),
         };
+    }
+
+    public static getRepetitionFEN(game: Game): string {
+        const boardPart: string = FEN.serializeBoardToFEN(game.board);
+        const activeColor: "b" | "w" = game.activeColor === Color.White ? "w" : "b";
+        const castling: string = FEN.castlingObjectToString(game.castlingRights);
+        const enPassant: string = game.enPassantTarget ? FEN.positionToString(game.enPassantTarget) : "-";
+        return [boardPart, activeColor, castling, enPassant].join(" ");
     }
 }

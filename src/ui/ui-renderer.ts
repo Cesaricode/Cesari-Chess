@@ -10,12 +10,18 @@ export class UiRenderer {
         const statusEl = document.getElementById(statusElementId);
         if (!statusEl) throw new Error("UI status element not found");
         this.statusElement = statusEl;
+
+        const board = document.getElementById("chessBoard");
+        if (board) {
+            board.addEventListener("contextmenu", (e) => e.preventDefault());
+        }
     }
 
     public render(game: Game): void {
         this.clearBoard();
         this.renderPieces(game);
         this.renderStatus(game.status, game.activeColor);
+        this.highlightCheckSquare(game);
     }
 
     public clearBoard(): void {
@@ -35,13 +41,13 @@ export class UiRenderer {
             const rank = y + 1;
             const square = document.getElementById(`${file}${rank}`);
             if (square) {
-                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="true" />`;
+                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="false" />`;
             }
         }
     }
 
     private getPieceIconPath(piece: Piece): string {
-        const colorPrefix = piece.color === "white" ? "w" : "b";
+        const colorPrefix: "w" | "b" = piece.color === "white" ? "w" : "b";
         const typeMap: Record<string, string> = {
             king: "K",
             queen: "Q",
@@ -55,33 +61,68 @@ export class UiRenderer {
     }
 
     public renderStatus(status: GameStatus, activeColor: string): void {
-        let statusText = "";
-        switch (status) {
-            case GameStatus.WhiteWins:
-                statusText = "White wins by checkmate!";
-                break;
-            case GameStatus.BlackWins:
-                statusText = "Black wins by checkmate!";
-                break;
-            case GameStatus.Stalemate:
-                statusText = "Draw by stalemate.";
-                break;
-            case GameStatus.Ongoing:
-                statusText = `${activeColor.charAt(0).toUpperCase() + activeColor.slice(1)} to move.`;
-                break;
-            default:
-                statusText = "Game ended.";
-        }
-        this.statusElement.textContent = statusText;
+        const statusMessages: Record<GameStatus, string> = {
+            [GameStatus.WhiteWins]: "White wins by checkmate!",
+            [GameStatus.BlackWins]: "Black wins by checkmate!",
+            [GameStatus.Stalemate]: "Draw by stalemate.",
+            [GameStatus.Draw]: "Draw.",
+            [GameStatus.Ongoing]: `${activeColor.charAt(0).toUpperCase() + activeColor.slice(1)} to move.`,
+            [GameStatus.Resignation]: "Game ended by resignation.",
+            [GameStatus.Timeout]: "Game ended by timeout.",
+            [GameStatus.Abandoned]: "Game ended by abandonment.",
+            [GameStatus.InsufficientMaterial]: "Draw by insufficient material.",
+            [GameStatus.ThreefoldRepetition]: "Draw by threefold repetition.",
+            [GameStatus.FiftyMoveRule]: "Draw by fifty-move rule."
+        };
+
+        this.statusElement.textContent = statusMessages[status] ?? "Game ended.";
     }
 
     public highlightSquare(squareId: string, type: "highlighted" | "targethighlighted" = "highlighted") {
-        const square = document.getElementById(squareId);
+        const square: HTMLElement | null = document.getElementById(squareId);
         if (square) square.classList.add(type);
     }
 
+    public selectSquare(squareId: string) {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                const sq: HTMLElement | null = document.getElementById(`${file}${rank}`);
+                if (sq) sq.classList.remove("selected");
+            }
+        }
+        const square: HTMLElement | null = document.getElementById(squareId);
+        if (square) square.classList.add("selected");
+    }
+
+    public highlightCheckSquare(game: Game): void {
+        this.resetCheckHighlight();
+        const king: Piece | undefined = game.board.getPiecesByColor(game.activeColor).find(p => p.type === "king" && p.isActive());
+        if (!king) return;
+        if (game.isKingInCheck(king.color)) {
+            const file: string = FILES[king.position.x];
+            const rank: number = king.position.y + 1;
+            const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
+            if (square) square.classList.add("checkhighlighted");
+        }
+    }
+
+    public resetSelect(): void {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeSelect(`${file}${rank}`);
+            }
+        }
+    }
+
+    public removeSelect(squareId: string): void {
+        const square: HTMLElement | null = document.getElementById(squareId);
+        if (square) {
+            square.classList.remove("selected");
+        }
+    }
+
     public removeHighlight(squareId: string) {
-        const square = document.getElementById(squareId);
+        const square: HTMLElement | null = document.getElementById(squareId);
         if (square) {
             square.classList.remove("highlighted");
             square.classList.remove("targethighlighted");
@@ -93,6 +134,21 @@ export class UiRenderer {
             for (const rank of RANKS) {
                 this.removeHighlight(`${file}${rank}`);
             }
+        }
+    }
+
+    public resetCheckHighlight(): void {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeCheckHighlight(`${file}${rank}`);
+            }
+        }
+    }
+
+    public removeCheckHighlight(squareId: string): void {
+        const square: HTMLElement | null = document.getElementById(squareId);
+        if (square) {
+            square.classList.remove("checkhighlighted");
         }
     }
 }

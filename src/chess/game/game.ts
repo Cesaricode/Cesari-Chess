@@ -1,5 +1,6 @@
 import { Board } from "../board/board.js";
 import { ChessClock } from "../clock/clock.js";
+import { FIFTY_MOVE_RULE_LIMIT, FIVEFOLD_REPETITION_COUNT, SEVENTYFIVE_MOVE_RULE_LIMIT, THREEFOLD_REPETITION_COUNT } from "../constants/game.js";
 import { King } from "../pieces/king.js";
 import { Piece } from "../pieces/piece.js";
 import { MoveValidator } from "../rules/move-validator.js";
@@ -10,6 +11,7 @@ import { GameStatus } from "../types/game-status.js";
 import { Move } from "../types/move.js";
 import { PieceType } from "../types/piece-type.js";
 import { Position } from "../types/position.js";
+import { FEN } from "../util/fen.js";
 
 export class Game implements GameState {
 
@@ -17,6 +19,7 @@ export class Game implements GameState {
     private _clock: ChessClock;
     private _status: GameStatus = GameStatus.Ongoing;
     private _moveHistory: Move[] = [];
+    private _positionHistory: Map<string, number> = new Map();
 
     private _gameState: GameState = {
         activeColor: Color.White,
@@ -186,6 +189,9 @@ export class Game implements GameState {
 
     private addToMoveHistory(move: Move): void {
         this._moveHistory.push(move);
+        const fen: string = FEN.getRepetitionFEN(this);
+        const count: number = this._positionHistory.get(fen) ?? 0;
+        this._positionHistory.set(fen, count + 1);
     }
 
     private assertOngoing(): void {
@@ -198,6 +204,34 @@ export class Game implements GameState {
         const opponent: Color = this.activeColor === Color.White ? Color.Black : Color.White;
         const isInCheck: boolean = this.isKingInCheck(opponent);
         const hasLegalMoves: boolean = this.hasLegalMoves(opponent);
+
+        if (this.hasInsufficientMaterial()) {
+            this._status = GameStatus.InsufficientMaterial;
+            return;
+        }
+
+        if (this.halfmoveClock >= SEVENTYFIVE_MOVE_RULE_LIMIT) {
+            this._status = GameStatus.Draw;
+            return;
+        }
+
+        if (this.halfmoveClock >= FIFTY_MOVE_RULE_LIMIT) {
+            // Todo: set a flag or status for claimable draw
+            this._status = GameStatus.Draw;
+            return;
+        }
+
+        const fen: string = FEN.getRepetitionFEN(this);
+        if (this._positionHistory.get(fen) === FIVEFOLD_REPETITION_COUNT) {
+            this._status = GameStatus.Draw;
+            return;
+        }
+
+        if (this._positionHistory.get(fen) === THREEFOLD_REPETITION_COUNT) {
+            // Todo: set a flag or status for claimable draw
+            this._status = GameStatus.Draw;
+            return;
+        }
 
         if (isInCheck && !hasLegalMoves) {
             this._status = this.activeColor === Color.White
@@ -251,6 +285,47 @@ export class Game implements GameState {
                 }
             }
         }
+        return false;
+    }
+
+    private hasInsufficientMaterial(): boolean {
+        const pieces: Piece[] = this._board.getAllPieces().filter(p => p.isActive());
+        if (pieces.length === 2) return true; // Only kings
+
+        if (pieces.length === 3) {
+            const nonKings: Piece[] = pieces.filter(p => p.type !== PieceType.King);
+            if (
+                nonKings.length === 1 &&
+                (nonKings[0].type === PieceType.Bishop || nonKings[0].type === PieceType.Knight)
+            ) {
+                return true;
+            }
+        }
+
+        if (pieces.length === 4) {
+            const nonKings: Piece[] = pieces.filter(p => p.type !== PieceType.King);
+            if (
+                nonKings.length === 2 &&
+                nonKings[0].type === PieceType.Bishop &&
+                nonKings[1].type === PieceType.Bishop
+            ) {
+                const sameColor = (pos: Position) => (pos.x + pos.y) % 2;
+                if (sameColor(nonKings[0].position) === sameColor(nonKings[1].position)) {
+                    return true;
+                }
+            }
+            if (
+                nonKings.length === 2 &&
+                (
+                    (nonKings[0].type === PieceType.Bishop && nonKings[1].type === PieceType.Knight) ||
+                    (nonKings[0].type === PieceType.Knight && nonKings[1].type === PieceType.Bishop) ||
+                    (nonKings[0].type === PieceType.Knight && nonKings[1].type === PieceType.Knight)
+                )
+            ) {
+                return true;
+            }
+        }
+
         return false;
     }
 

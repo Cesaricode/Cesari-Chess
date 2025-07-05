@@ -6,11 +6,16 @@ export class UiRenderer {
         if (!statusEl)
             throw new Error("UI status element not found");
         this.statusElement = statusEl;
+        const board = document.getElementById("chessBoard");
+        if (board) {
+            board.addEventListener("contextmenu", (e) => e.preventDefault());
+        }
     }
     render(game) {
         this.clearBoard();
         this.renderPieces(game);
         this.renderStatus(game.status, game.activeColor);
+        this.highlightCheckSquare(game);
     }
     clearBoard() {
         for (const file of FILES) {
@@ -30,7 +35,7 @@ export class UiRenderer {
             const rank = y + 1;
             const square = document.getElementById(`${file}${rank}`);
             if (square) {
-                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="true" />`;
+                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="false" />`;
             }
         }
     }
@@ -48,29 +53,64 @@ export class UiRenderer {
         return `/icons/${colorPrefix}${typeLetter}.svg`;
     }
     renderStatus(status, activeColor) {
-        let statusText = "";
-        switch (status) {
-            case GameStatus.WhiteWins:
-                statusText = "White wins by checkmate!";
-                break;
-            case GameStatus.BlackWins:
-                statusText = "Black wins by checkmate!";
-                break;
-            case GameStatus.Stalemate:
-                statusText = "Draw by stalemate.";
-                break;
-            case GameStatus.Ongoing:
-                statusText = `${activeColor.charAt(0).toUpperCase() + activeColor.slice(1)} to move.`;
-                break;
-            default:
-                statusText = "Game ended.";
-        }
-        this.statusElement.textContent = statusText;
+        var _a;
+        const statusMessages = {
+            [GameStatus.WhiteWins]: "White wins by checkmate!",
+            [GameStatus.BlackWins]: "Black wins by checkmate!",
+            [GameStatus.Stalemate]: "Draw by stalemate.",
+            [GameStatus.Draw]: "Draw.",
+            [GameStatus.Ongoing]: `${activeColor.charAt(0).toUpperCase() + activeColor.slice(1)} to move.`,
+            [GameStatus.Resignation]: "Game ended by resignation.",
+            [GameStatus.Timeout]: "Game ended by timeout.",
+            [GameStatus.Abandoned]: "Game ended by abandonment.",
+            [GameStatus.InsufficientMaterial]: "Draw by insufficient material.",
+            [GameStatus.ThreefoldRepetition]: "Draw by threefold repetition.",
+            [GameStatus.FiftyMoveRule]: "Draw by fifty-move rule."
+        };
+        this.statusElement.textContent = (_a = statusMessages[status]) !== null && _a !== void 0 ? _a : "Game ended.";
     }
     highlightSquare(squareId, type = "highlighted") {
         const square = document.getElementById(squareId);
         if (square)
             square.classList.add(type);
+    }
+    selectSquare(squareId) {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                const sq = document.getElementById(`${file}${rank}`);
+                if (sq)
+                    sq.classList.remove("selected");
+            }
+        }
+        const square = document.getElementById(squareId);
+        if (square)
+            square.classList.add("selected");
+    }
+    highlightCheckSquare(game) {
+        this.resetCheckHighlight();
+        const king = game.board.getPiecesByColor(game.activeColor).find(p => p.type === "king" && p.isActive());
+        if (!king)
+            return;
+        if (game.isKingInCheck(king.color)) {
+            const file = FILES[king.position.x];
+            const rank = king.position.y + 1;
+            const square = document.getElementById(`${file}${rank}`);
+            if (square)
+                square.classList.add("checkhighlighted");
+        }
+    }
+    resetSelect() {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeSelect(`${file}${rank}`);
+            }
+        }
+    }
+    removeSelect(squareId) {
+        const square = document.getElementById(squareId);
+        if (square) {
+            square.classList.remove("selected");
+        }
     }
     removeHighlight(squareId) {
         const square = document.getElementById(squareId);
@@ -84,6 +124,19 @@ export class UiRenderer {
             for (const rank of RANKS) {
                 this.removeHighlight(`${file}${rank}`);
             }
+        }
+    }
+    resetCheckHighlight() {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeCheckHighlight(`${file}${rank}`);
+            }
+        }
+    }
+    removeCheckHighlight(squareId) {
+        const square = document.getElementById(squareId);
+        if (square) {
+            square.classList.remove("checkhighlighted");
         }
     }
 }
