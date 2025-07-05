@@ -9,21 +9,26 @@ import { Position } from "../chess/types/position.js";
 import { PromotionPieceType } from "../chess/types/promotion-piece-type.js";
 import { BotPlayer } from "../player/bot-player.js";
 import { Player } from "../player/player.js";
+import { BoardEventManager } from "../ui/board-event-manager.js";
 import { UiRenderer } from "../ui/ui-renderer.js";
+import { ControlEventManager } from "../ui/control-event-manager.js";
 
 export class GameController {
 
     private _game: Game;
     private _ui: UiRenderer;
+    private _boardEventManager: BoardEventManager = new BoardEventManager();
+    private _controlEventManager: ControlEventManager = new ControlEventManager();
+
     private _localPlayer: Player;
     private _remotePlayer: Player;
 
     private _undoStack: Game[] = [];
     private _redoStack: Game[] = [];
 
-    private _boardListeners: Array<{ el: HTMLElement, handler: EventListener; }> = [];
-
     private _selectedSquare: Position | null = null;
+    private _boardEnabled: boolean = true;
+
 
     public constructor(localPlayer: Player, remotePlayer: Player, game?: Game) {
         this._localPlayer = localPlayer;
@@ -35,43 +40,15 @@ export class GameController {
 
     private init(): void {
         this._ui.render(this._game);
-        this.setupBoardEventListeners();
-        this.setupControlEventListeners();
-    }
-
-    private setupBoardEventListeners(): void {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
-                if (square) {
-                    const handler = async () => {
-                        try {
-                            await this.handleSquareClick(file, rank);
-                        } catch (e) {
-                            console.error(e);
-                        }
-                    };
-                    square.addEventListener("click", handler);
-                    this._boardListeners.push({ el: square, handler });
-                }
-            }
-        }
-    }
-
-    private setupControlEventListeners(): void {
-        const undoBtn: HTMLElement | null = document.getElementById("undoBtn") as HTMLButtonElement | null;
-        const redoBtn: HTMLElement | null = document.getElementById("redoBtn") as HTMLButtonElement | null;
-        const homeBtn: HTMLElement | null = document.getElementById("homeBtn") as HTMLButtonElement | null;
-        if (homeBtn) homeBtn.onclick = () => window.location.href = "index.html";
-        if (undoBtn) undoBtn.onclick = () => this.undo();
-        if (redoBtn) redoBtn.onclick = () => this.redo();
-    }
-
-    private removeBoardEventListeners(): void {
-        for (const { el, handler } of this._boardListeners) {
-            el.removeEventListener("click", handler);
-        }
-        this._boardListeners = [];
+        this._boardEventManager.setupBoardEventListeners(async (file, rank) => {
+            if (!this._boardEnabled) return;
+            await this.handleSquareClick(file, rank);
+        });
+        this._controlEventManager.setupControlEventListeners({
+            onUndo: () => this.undo(),
+            onRedo: () => this.redo(),
+            onHome: () => window.location.href = "index.html"
+        });
     }
 
     private async handleSquareClick(file: typeof FILES[number], rank: typeof RANKS[number]): Promise<void> {
@@ -85,7 +62,7 @@ export class GameController {
         this._ui.render(this._game);
 
         if (this._game.status !== "ongoing") {
-            this.removeBoardEventListeners();
+            this._boardEventManager.removeBoardEventListeners();
         }
     }
 
@@ -177,6 +154,7 @@ export class GameController {
             this._ui.resetHighlights();
             this._ui.resetSelect();
             this._ui.render(this._game);
+            this.updateControlButtons();
             await this.tryBotMove();
         }
     }
@@ -185,11 +163,10 @@ export class GameController {
         if (this._game.status === "ongoing") {
             const currentPlayer: Player = this._game.activeColor === this._localPlayer.color ? this._localPlayer : this._remotePlayer;
             if (currentPlayer.isBot && typeof (currentPlayer as BotPlayer).getMove === "function") {
-                this.removeBoardEventListeners();
+                this.disableBoard();
                 const move: Move = await (currentPlayer as BotPlayer).getMove(this._game);
-                this.attemptMove(move);
-                this._ui.render(this._game);
-                this.setupBoardEventListeners();
+                await this.attemptMove(move);
+                this.enableBoard();
             }
         }
     }
@@ -206,7 +183,7 @@ export class GameController {
             if (!MoveValidator.validateMove(this._game, move)) continue;
             const targetFile: string = FILES[movePos.x];
             const targetRank: number = movePos.y + 1;
-            const targetPiece = this._game.board.getPieceAt(movePos);
+            const targetPiece: Piece | null = this._game.board.getPieceAt(movePos);
             if (targetPiece && targetPiece.color !== piece.color) {
                 this._ui.highlightSquare(`${targetFile}${targetRank}`, "targethighlighted");
             } else {
@@ -249,6 +226,7 @@ export class GameController {
         this._redoStack.push(this._game.clone());
         this._game = this._undoStack.pop()!;
         this._ui.render(this._game);
+        this.updateControlButtons();
     }
 
     public redo(): void {
@@ -256,5 +234,22 @@ export class GameController {
         this._undoStack.push(this._game.clone());
         this._game = this._redoStack.pop()!;
         this._ui.render(this._game);
+        this.updateControlButtons();
+    }
+
+    private enableBoard(): void {
+        this._boardEnabled = true;
+    }
+
+    private disableBoard(): void {
+        this._boardEnabled = false;
+    }
+
+    private updateControlButtons(): void {
+        this._controlEventManager.updateControlButtons(
+            this._undoStack.length > 0,
+            this._redoStack.length > 0,
+            this._game.status === "ongoing"
+        );
     }
 }

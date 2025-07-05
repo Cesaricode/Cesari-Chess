@@ -7,16 +7,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { FILES, RANKS } from "../chess/constants/board.js";
+import { FILES } from "../chess/constants/board.js";
 import { GameFactory } from "../chess/game/game-factory.js";
 import { MoveValidator } from "../chess/rules/move-validator.js";
+import { BoardEventManager } from "../ui/board-event-manager.js";
 import { UiRenderer } from "../ui/ui-renderer.js";
+import { ControlEventManager } from "../ui/control-event-manager.js";
 export class GameController {
     constructor(localPlayer, remotePlayer, game) {
+        this._boardEventManager = new BoardEventManager();
+        this._controlEventManager = new ControlEventManager();
         this._undoStack = [];
         this._redoStack = [];
-        this._boardListeners = [];
         this._selectedSquare = null;
+        this._boardEnabled = true;
         this._localPlayer = localPlayer;
         this._remotePlayer = remotePlayer;
         this._ui = new UiRenderer();
@@ -25,44 +29,16 @@ export class GameController {
     }
     init() {
         this._ui.render(this._game);
-        this.setupBoardEventListeners();
-        this.setupControlEventListeners();
-    }
-    setupBoardEventListeners() {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                const square = document.getElementById(`${file}${rank}`);
-                if (square) {
-                    const handler = () => __awaiter(this, void 0, void 0, function* () {
-                        try {
-                            yield this.handleSquareClick(file, rank);
-                        }
-                        catch (e) {
-                            console.error(e);
-                        }
-                    });
-                    square.addEventListener("click", handler);
-                    this._boardListeners.push({ el: square, handler });
-                }
-            }
-        }
-    }
-    setupControlEventListeners() {
-        const undoBtn = document.getElementById("undoBtn");
-        const redoBtn = document.getElementById("redoBtn");
-        const homeBtn = document.getElementById("homeBtn");
-        if (homeBtn)
-            homeBtn.onclick = () => window.location.href = "index.html";
-        if (undoBtn)
-            undoBtn.onclick = () => this.undo();
-        if (redoBtn)
-            redoBtn.onclick = () => this.redo();
-    }
-    removeBoardEventListeners() {
-        for (const { el, handler } of this._boardListeners) {
-            el.removeEventListener("click", handler);
-        }
-        this._boardListeners = [];
+        this._boardEventManager.setupBoardEventListeners((file, rank) => __awaiter(this, void 0, void 0, function* () {
+            if (!this._boardEnabled)
+                return;
+            yield this.handleSquareClick(file, rank);
+        }));
+        this._controlEventManager.setupControlEventListeners({
+            onUndo: () => this.undo(),
+            onRedo: () => this.redo(),
+            onHome: () => window.location.href = "index.html"
+        });
     }
     handleSquareClick(file, rank) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -75,7 +51,7 @@ export class GameController {
             }
             this._ui.render(this._game);
             if (this._game.status !== "ongoing") {
-                this.removeBoardEventListeners();
+                this._boardEventManager.removeBoardEventListeners();
             }
         });
     }
@@ -156,6 +132,7 @@ export class GameController {
                 this._ui.resetHighlights();
                 this._ui.resetSelect();
                 this._ui.render(this._game);
+                this.updateControlButtons();
                 yield this.tryBotMove();
             }
         });
@@ -165,11 +142,10 @@ export class GameController {
             if (this._game.status === "ongoing") {
                 const currentPlayer = this._game.activeColor === this._localPlayer.color ? this._localPlayer : this._remotePlayer;
                 if (currentPlayer.isBot && typeof currentPlayer.getMove === "function") {
-                    this.removeBoardEventListeners();
+                    this.disableBoard();
                     const move = yield currentPlayer.getMove(this._game);
-                    this.attemptMove(move);
-                    this._ui.render(this._game);
-                    this.setupBoardEventListeners();
+                    yield this.attemptMove(move);
+                    this.enableBoard();
                 }
             }
         });
@@ -229,6 +205,7 @@ export class GameController {
         this._redoStack.push(this._game.clone());
         this._game = this._undoStack.pop();
         this._ui.render(this._game);
+        this.updateControlButtons();
     }
     redo() {
         if (this._redoStack.length === 0)
@@ -236,5 +213,15 @@ export class GameController {
         this._undoStack.push(this._game.clone());
         this._game = this._redoStack.pop();
         this._ui.render(this._game);
+        this.updateControlButtons();
+    }
+    enableBoard() {
+        this._boardEnabled = true;
+    }
+    disableBoard() {
+        this._boardEnabled = false;
+    }
+    updateControlButtons() {
+        this._controlEventManager.updateControlButtons(this._undoStack.length > 0, this._redoStack.length > 0, this._game.status === "ongoing");
     }
 }

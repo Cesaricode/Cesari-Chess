@@ -15,12 +15,12 @@ export class FEN {
     private constructor() { }
 
     public static serializeFullFEN(game: Game): string {
-        const boardPart = this.serializeBoardToFEN(game.board);
-        const activeColor = game.activeColor === Color.White ? "w" : "b";
-        const castling = this.castlingObjectToString(game.castlingRights);
-        const enPassant = game.enPassantTarget ? this.positionToString(game.enPassantTarget) : "-";
-        const halfmove = game.halfmoveClock ?? 0;
-        const fullmove = game.fullmoveNumber ?? 1;
+        const boardPart: string = this.serializeBoardToFEN(game.board);
+        const activeColor: string = game.activeColor === Color.White ? "w" : "b";
+        const castling: string = this.castlingObjectToString(game.castlingRights);
+        const enPassant: string = game.enPassantTarget ? this.positionToString(game.enPassantTarget) : "-";
+        const halfmove: number = game.halfmoveClock ?? 0;
+        const fullmove: number = game.fullmoveNumber ?? 1;
         return [boardPart, activeColor, castling, enPassant, halfmove, fullmove].join(" ");
     }
 
@@ -36,9 +36,9 @@ export class FEN {
 
     public static gameFromFEN(fen: string): Game {
         const [boardPart, activeColor, castling, enPassant, halfmove, fullmove] = fen.split(" ");
-        const board = new Board();
+        const board: Board = new Board();
         this.parseBoardFromFEN(board, boardPart);
-        const game = new Game(board);
+        const game: Game = new Game(board);
         game.activeColor = activeColor === "w" ? Color.White : Color.Black;
         game.castlingRights = this.castlingStringToObject(castling);
         game.enPassantTarget = enPassant !== "-" ? this.parsePosition(enPassant) : null;

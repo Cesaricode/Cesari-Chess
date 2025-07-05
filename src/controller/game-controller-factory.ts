@@ -1,6 +1,5 @@
 import { GameController } from "./game-controller.js";
 import { Player } from "../player/player.js";
-import { Game } from "../chess/game/game.js";
 import { GameFactory } from "../chess/game/game-factory.js";
 import { Color } from "../chess/types/color.js";
 import { PlayerFactory } from "../player/player-factory.js";
