@@ -7,6 +7,7 @@ import { Color } from "../chess/types/color.js";
 import { Move } from "../chess/types/move.js";
 import { Position } from "../chess/types/position.js";
 import { PromotionPieceType } from "../chess/types/promotion-piece-type.js";
+import { BotPlayer } from "../player/bot-player.js";
 import { Player } from "../player/player.js";
 import { UiRenderer } from "../ui/ui-renderer.js";
 
@@ -43,7 +44,13 @@ export class GameController {
             for (const rank of RANKS) {
                 const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
                 if (square) {
-                    const handler = () => this.handleSquareClick(file, rank);
+                    const handler = async () => {
+                        try {
+                            await this.handleSquareClick(file, rank);
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    };
                     square.addEventListener("click", handler);
                     this._boardListeners.push({ el: square, handler });
                 }
@@ -67,13 +74,13 @@ export class GameController {
         this._boardListeners = [];
     }
 
-    private handleSquareClick(file: typeof FILES[number], rank: typeof RANKS[number]): void {
+    private async handleSquareClick(file: typeof FILES[number], rank: typeof RANKS[number]): Promise<void> {
         const pos: Position = { x: FILES.indexOf(file), y: rank - 1 };
 
         if (!this._selectedSquare) {
             this.handleFirstSquareClick(pos, file, rank);
         } else {
-            this.handleSecondSquareClick(pos);
+            await this.handleSecondSquareClick(pos);
         }
         this._ui.render(this._game);
 
@@ -95,12 +102,13 @@ export class GameController {
         }
     }
 
-    private handleSecondSquareClick(to: Position): void {
+    private async handleSecondSquareClick(to: Position): Promise<void> {
         const from: Position = this._selectedSquare!;
         const fromPiece: Piece | null = this._game.board.getPieceAt(from);
         const toPiece: Piece | null = this._game.board.getPieceAt(to);
 
         if (this.isSelectingSamePiece(fromPiece, toPiece)) {
+            this._ui.resetHighlights();
             this._ui.resetSelect();
             this._selectedSquare = null;
         }
@@ -112,7 +120,7 @@ export class GameController {
 
         if (fromPiece) {
             const move: Move = this.buildMoveObject(fromPiece, from, to);
-            this.attemptMove(move);
+            await this.attemptMove(move);
             this._ui.resetSelect();
         }
     }
@@ -160,13 +168,29 @@ export class GameController {
         return { from, to, piece: fromPiece.type, color, ...(promotion ? { promotion } : {}) };
     }
 
-    private attemptMove(move: Move): void {
+    private async attemptMove(move: Move): Promise<void> {
         const gameClone: Game = this._game.clone();
         if (this._game.makeMove(move)) {
             this._undoStack.push(gameClone);
             this._redoStack = [];
             this._selectedSquare = null;
             this._ui.resetHighlights();
+            this._ui.resetSelect();
+            this._ui.render(this._game);
+            await this.tryBotMove();
+        }
+    }
+
+    private async tryBotMove(): Promise<void> {
+        if (this._game.status === "ongoing") {
+            const currentPlayer: Player = this._game.activeColor === this._localPlayer.color ? this._localPlayer : this._remotePlayer;
+            if (currentPlayer.isBot && typeof (currentPlayer as BotPlayer).getMove === "function") {
+                this.removeBoardEventListeners();
+                const move: Move = await (currentPlayer as BotPlayer).getMove(this._game);
+                this.attemptMove(move);
+                this._ui.render(this._game);
+                this.setupBoardEventListeners();
+            }
         }
     }
 

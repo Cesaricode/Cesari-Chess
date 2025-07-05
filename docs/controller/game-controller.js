@@ -1,3 +1,12 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { FILES, RANKS } from "../chess/constants/board.js";
 import { GameFactory } from "../chess/game/game-factory.js";
 import { MoveValidator } from "../chess/rules/move-validator.js";
@@ -24,7 +33,14 @@ export class GameController {
             for (const rank of RANKS) {
                 const square = document.getElementById(`${file}${rank}`);
                 if (square) {
-                    const handler = () => this.handleSquareClick(file, rank);
+                    const handler = () => __awaiter(this, void 0, void 0, function* () {
+                        try {
+                            yield this.handleSquareClick(file, rank);
+                        }
+                        catch (e) {
+                            console.error(e);
+                        }
+                    });
                     square.addEventListener("click", handler);
                     this._boardListeners.push({ el: square, handler });
                 }
@@ -49,17 +65,19 @@ export class GameController {
         this._boardListeners = [];
     }
     handleSquareClick(file, rank) {
-        const pos = { x: FILES.indexOf(file), y: rank - 1 };
-        if (!this._selectedSquare) {
-            this.handleFirstSquareClick(pos, file, rank);
-        }
-        else {
-            this.handleSecondSquareClick(pos);
-        }
-        this._ui.render(this._game);
-        if (this._game.status !== "ongoing") {
-            this.removeBoardEventListeners();
-        }
+        return __awaiter(this, void 0, void 0, function* () {
+            const pos = { x: FILES.indexOf(file), y: rank - 1 };
+            if (!this._selectedSquare) {
+                this.handleFirstSquareClick(pos, file, rank);
+            }
+            else {
+                yield this.handleSecondSquareClick(pos);
+            }
+            this._ui.render(this._game);
+            if (this._game.status !== "ongoing") {
+                this.removeBoardEventListeners();
+            }
+        });
     }
     handleFirstSquareClick(pos, file, rank) {
         this._selectedSquare = pos;
@@ -74,22 +92,25 @@ export class GameController {
         }
     }
     handleSecondSquareClick(to) {
-        const from = this._selectedSquare;
-        const fromPiece = this._game.board.getPieceAt(from);
-        const toPiece = this._game.board.getPieceAt(to);
-        if (this.isSelectingSamePiece(fromPiece, toPiece)) {
-            this._ui.resetSelect();
-            this._selectedSquare = null;
-        }
-        if (this.isSelectingOwnPieceAgain(fromPiece, toPiece)) {
-            this.selectNewPiece(toPiece, to);
-            return;
-        }
-        if (fromPiece) {
-            const move = this.buildMoveObject(fromPiece, from, to);
-            this.attemptMove(move);
-            this._ui.resetSelect();
-        }
+        return __awaiter(this, void 0, void 0, function* () {
+            const from = this._selectedSquare;
+            const fromPiece = this._game.board.getPieceAt(from);
+            const toPiece = this._game.board.getPieceAt(to);
+            if (this.isSelectingSamePiece(fromPiece, toPiece)) {
+                this._ui.resetHighlights();
+                this._ui.resetSelect();
+                this._selectedSquare = null;
+            }
+            if (this.isSelectingOwnPieceAgain(fromPiece, toPiece)) {
+                this.selectNewPiece(toPiece, to);
+                return;
+            }
+            if (fromPiece) {
+                const move = this.buildMoveObject(fromPiece, from, to);
+                yield this.attemptMove(move);
+                this._ui.resetSelect();
+            }
+        });
     }
     isSelectingSamePiece(fromPiece, toPiece) {
         return fromPiece === toPiece;
@@ -126,13 +147,32 @@ export class GameController {
         return Object.assign({ from, to, piece: fromPiece.type, color }, (promotion ? { promotion } : {}));
     }
     attemptMove(move) {
-        const gameClone = this._game.clone();
-        if (this._game.makeMove(move)) {
-            this._undoStack.push(gameClone);
-            this._redoStack = [];
-            this._selectedSquare = null;
-            this._ui.resetHighlights();
-        }
+        return __awaiter(this, void 0, void 0, function* () {
+            const gameClone = this._game.clone();
+            if (this._game.makeMove(move)) {
+                this._undoStack.push(gameClone);
+                this._redoStack = [];
+                this._selectedSquare = null;
+                this._ui.resetHighlights();
+                this._ui.resetSelect();
+                this._ui.render(this._game);
+                yield this.tryBotMove();
+            }
+        });
+    }
+    tryBotMove() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this._game.status === "ongoing") {
+                const currentPlayer = this._game.activeColor === this._localPlayer.color ? this._localPlayer : this._remotePlayer;
+                if (currentPlayer.isBot && typeof currentPlayer.getMove === "function") {
+                    this.removeBoardEventListeners();
+                    const move = yield currentPlayer.getMove(this._game);
+                    this.attemptMove(move);
+                    this._ui.render(this._game);
+                    this.setupBoardEventListeners();
+                }
+            }
+        });
     }
     highlightLegalMoves(piece, from) {
         const pseudoLegalMoves = piece.getPseudoLegalMoves();

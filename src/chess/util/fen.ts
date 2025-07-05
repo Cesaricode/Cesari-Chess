@@ -14,6 +14,39 @@ export class FEN {
 
     private constructor() { }
 
+    public static serializeFullFEN(game: Game): string {
+        const boardPart = this.serializeBoardToFEN(game.board);
+        const activeColor = game.activeColor === Color.White ? "w" : "b";
+        const castling = this.castlingObjectToString(game.castlingRights);
+        const enPassant = game.enPassantTarget ? this.positionToString(game.enPassantTarget) : "-";
+        const halfmove = game.halfmoveClock ?? 0;
+        const fullmove = game.fullmoveNumber ?? 1;
+        return [boardPart, activeColor, castling, enPassant, halfmove, fullmove].join(" ");
+    }
+
+    public static parseFullFEN(game: Game, fen: string): void {
+        const [boardPart, activeColor, castling, enPassant, halfmove, fullmove] = fen.split(" ");
+        this.parseBoardFromFEN(game.board, boardPart);
+        game.activeColor = activeColor === "w" ? Color.White : Color.Black;
+        game.castlingRights = this.castlingStringToObject(castling);
+        game.enPassantTarget = enPassant !== "-" ? this.parsePosition(enPassant) : null;
+        game.halfmoveClock = parseInt(halfmove, 10);
+        game.fullmoveNumber = parseInt(fullmove, 10);
+    }
+
+    public static gameFromFEN(fen: string): Game {
+        const [boardPart, activeColor, castling, enPassant, halfmove, fullmove] = fen.split(" ");
+        const board = new Board();
+        this.parseBoardFromFEN(board, boardPart);
+        const game = new Game(board);
+        game.activeColor = activeColor === "w" ? Color.White : Color.Black;
+        game.castlingRights = this.castlingStringToObject(castling);
+        game.enPassantTarget = enPassant !== "-" ? this.parsePosition(enPassant) : null;
+        game.halfmoveClock = parseInt(halfmove, 10);
+        game.fullmoveNumber = parseInt(fullmove, 10);
+        return game;
+    }
+
     public static parseBoardFromFEN(board: Board, placement: string): void {
         const pieces: Piece[] = [];
         const rows: string[] = placement.split("/");
@@ -44,7 +77,7 @@ export class FEN {
 
     public static serializeBoardToFEN(board: Board): string {
         let fen: string = "";
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
+        for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
             let empty: number = 0;
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 const piece: Piece | null = board.getPieceAt({ x, y });
@@ -67,7 +100,7 @@ export class FEN {
                 }
             }
             if (empty > 0) fen += empty;
-            if (y < BOARD_HEIGHT - 1) fen += "/";
+            if (y > 0) fen += "/";
         }
         return fen;
     }

@@ -1,8 +1,9 @@
-import { Game } from "../chess/game/game.js";
-import { Move } from "../chess/types/move.js";
+import { Color } from "../chess/types/color.js";
 
-export interface Player {
-    name: string;
-    isBot: boolean;
-    getMove?(game: Game): Promise<Move>;
+export abstract class Player {
+    constructor(
+        public name: string,
+        public color: Color,
+        public isBot: boolean
+    ) { }
 }
