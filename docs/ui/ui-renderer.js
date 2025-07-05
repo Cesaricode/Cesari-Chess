@@ -74,6 +74,15 @@ export class UiRenderer {
         if (square)
             square.classList.add(type);
     }
+    highlightLastMove(from, to) {
+        this.resetLastMoveHighlights();
+        const fromSquare = document.getElementById(from);
+        const toSquare = document.getElementById(to);
+        if (fromSquare && toSquare) {
+            fromSquare.classList.add("lastmove");
+            toSquare.classList.add("lastmove");
+        }
+    }
     selectSquare(squareId) {
         for (const file of FILES) {
             for (const rank of RANKS) {
@@ -87,7 +96,7 @@ export class UiRenderer {
             square.classList.add("selected");
     }
     highlightCheckSquare(game) {
-        this.resetCheckHighlight();
+        this.resetCheckHighlights();
         const king = game.board.getPiecesByColor(game.activeColor).find(p => p.type === "king" && p.isActive());
         if (!king)
             return;
@@ -99,14 +108,14 @@ export class UiRenderer {
                 square.classList.add("checkhighlighted");
         }
     }
-    resetSelect() {
+    resetSelectHighlights() {
         for (const file of FILES) {
             for (const rank of RANKS) {
-                this.removeSelect(`${file}${rank}`);
+                this.removeSelectHighlight(`${file}${rank}`);
             }
         }
     }
-    removeSelect(squareId) {
+    removeSelectHighlight(squareId) {
         const square = document.getElementById(squareId);
         if (square) {
             square.classList.remove("selected");
@@ -126,7 +135,7 @@ export class UiRenderer {
             }
         }
     }
-    resetCheckHighlight() {
+    resetCheckHighlights() {
         for (const file of FILES) {
             for (const rank of RANKS) {
                 this.removeCheckHighlight(`${file}${rank}`);
@@ -137,6 +146,19 @@ export class UiRenderer {
         const square = document.getElementById(squareId);
         if (square) {
             square.classList.remove("checkhighlighted");
+        }
+    }
+    resetLastMoveHighlights() {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeLastMoveHighlight(`${file}${rank}`);
+            }
+        }
+    }
+    removeLastMoveHighlight(squareId) {
+        const square = document.getElementById(squareId);
+        if (square) {
+            square.classList.remove("lastmove");
         }
     }
 }

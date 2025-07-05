@@ -72,9 +72,9 @@ export class GameController {
             const from = this._selectedSquare;
             const fromPiece = this._game.board.getPieceAt(from);
             const toPiece = this._game.board.getPieceAt(to);
+            this._ui.resetHighlights();
             if (this.isSelectingSamePiece(fromPiece, toPiece)) {
-                this._ui.resetHighlights();
-                this._ui.resetSelect();
+                this._ui.resetSelectHighlights();
                 this._selectedSquare = null;
             }
             if (this.isSelectingOwnPieceAgain(fromPiece, toPiece)) {
@@ -84,8 +84,9 @@ export class GameController {
             if (fromPiece) {
                 const move = this.buildMoveObject(fromPiece, from, to);
                 yield this.attemptMove(move);
-                this._ui.resetSelect();
+                this._ui.resetSelectHighlights();
             }
+            this._selectedSquare = null;
         });
     }
     isSelectingSamePiece(fromPiece, toPiece) {
@@ -130,8 +131,9 @@ export class GameController {
                 this._redoStack = [];
                 this._selectedSquare = null;
                 this._ui.resetHighlights();
-                this._ui.resetSelect();
+                this._ui.resetSelectHighlights();
                 this._ui.render(this._game);
+                this.highlightLastMove();
                 this.updateControlButtons();
                 yield this.tryBotMove();
             }
@@ -177,12 +179,12 @@ export class GameController {
         if (piece.type === "king") {
             const castlingTargets = [];
             if (piece.color === "white" && from.x === 4 && from.y === 0) {
-                castlingTargets.push({ x: 6, y: 0 }); // g1
-                castlingTargets.push({ x: 2, y: 0 }); // c1
+                castlingTargets.push({ x: 6, y: 0 });
+                castlingTargets.push({ x: 2, y: 0 });
             }
             if (piece.color === "black" && from.x === 4 && from.y === 7) {
-                castlingTargets.push({ x: 6, y: 7 }); // g8
-                castlingTargets.push({ x: 2, y: 7 }); // c8
+                castlingTargets.push({ x: 6, y: 7 });
+                castlingTargets.push({ x: 2, y: 7 });
             }
             for (const castlePos of castlingTargets) {
                 const move = {
@@ -199,20 +201,46 @@ export class GameController {
             }
         }
     }
+    highlightLastMove() {
+        const lastMove = this._game.moveHistory.length > 0
+            ? this._game.moveHistory[this._game.moveHistory.length - 1]
+            : null;
+        if (!lastMove) {
+            this._ui.resetLastMoveHighlights();
+            return;
+        }
+        const fromFile = FILES[lastMove.from.x];
+        const fromRank = lastMove.from.y + 1;
+        const toFile = FILES[lastMove.to.x];
+        const toRank = lastMove.to.y + 1;
+        this._ui.highlightLastMove(`${fromFile}${fromRank}`, `${toFile}${toRank}`);
+    }
     undo() {
         if (this._undoStack.length === 0)
             return;
         this._redoStack.push(this._game.clone());
+        if (this._remotePlayer.isBot && this._game.activeColor === this._localPlayer.color) {
+            this._redoStack.push(this._undoStack.pop());
+        }
         this._game = this._undoStack.pop();
+        this._ui.resetHighlights();
+        this._ui.resetSelectHighlights();
         this._ui.render(this._game);
+        this.highlightLastMove();
         this.updateControlButtons();
     }
     redo() {
         if (this._redoStack.length === 0)
             return;
         this._undoStack.push(this._game.clone());
+        if (this._remotePlayer.isBot && this._game.activeColor === this._localPlayer.color) {
+            this._undoStack.push(this._redoStack.pop());
+        }
         this._game = this._redoStack.pop();
+        this._ui.resetHighlights();
+        this._ui.resetSelectHighlights();
         this._ui.render(this._game);
+        this.highlightLastMove();
         this.updateControlButtons();
     }
     enableBoard() {

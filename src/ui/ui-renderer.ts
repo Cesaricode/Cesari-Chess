@@ -78,12 +78,22 @@ export class UiRenderer {
         this.statusElement.textContent = statusMessages[status] ?? "Game ended.";
     }
 
-    public highlightSquare(squareId: string, type: "highlighted" | "targethighlighted" = "highlighted") {
+    public highlightSquare(squareId: string, type: "highlighted" | "targethighlighted" = "highlighted"): void {
         const square: HTMLElement | null = document.getElementById(squareId);
         if (square) square.classList.add(type);
     }
 
-    public selectSquare(squareId: string) {
+    public highlightLastMove(from: string, to: string): void {
+        this.resetLastMoveHighlights();
+        const fromSquare: HTMLElement | null = document.getElementById(from);
+        const toSquare: HTMLElement | null = document.getElementById(to);
+        if (fromSquare && toSquare) {
+            fromSquare.classList.add("lastmove");
+            toSquare.classList.add("lastmove");
+        }
+    }
+
+    public selectSquare(squareId: string): void {
         for (const file of FILES) {
             for (const rank of RANKS) {
                 const sq: HTMLElement | null = document.getElementById(`${file}${rank}`);
@@ -95,7 +105,7 @@ export class UiRenderer {
     }
 
     public highlightCheckSquare(game: Game): void {
-        this.resetCheckHighlight();
+        this.resetCheckHighlights();
         const king: Piece | undefined = game.board.getPiecesByColor(game.activeColor).find(p => p.type === "king" && p.isActive());
         if (!king) return;
         if (game.isKingInCheck(king.color)) {
@@ -106,22 +116,22 @@ export class UiRenderer {
         }
     }
 
-    public resetSelect(): void {
+    public resetSelectHighlights(): void {
         for (const file of FILES) {
             for (const rank of RANKS) {
-                this.removeSelect(`${file}${rank}`);
+                this.removeSelectHighlight(`${file}${rank}`);
             }
         }
     }
 
-    public removeSelect(squareId: string): void {
+    private removeSelectHighlight(squareId: string): void {
         const square: HTMLElement | null = document.getElementById(squareId);
         if (square) {
             square.classList.remove("selected");
         }
     }
 
-    public removeHighlight(squareId: string) {
+    private removeHighlight(squareId: string): void {
         const square: HTMLElement | null = document.getElementById(squareId);
         if (square) {
             square.classList.remove("highlighted");
@@ -137,7 +147,7 @@ export class UiRenderer {
         }
     }
 
-    public resetCheckHighlight(): void {
+    private resetCheckHighlights(): void {
         for (const file of FILES) {
             for (const rank of RANKS) {
                 this.removeCheckHighlight(`${file}${rank}`);
@@ -145,10 +155,25 @@ export class UiRenderer {
         }
     }
 
-    public removeCheckHighlight(squareId: string): void {
+    private removeCheckHighlight(squareId: string): void {
         const square: HTMLElement | null = document.getElementById(squareId);
         if (square) {
             square.classList.remove("checkhighlighted");
+        }
+    }
+
+    public resetLastMoveHighlights(): void {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeLastMoveHighlight(`${file}${rank}`);
+            }
+        }
+    }
+
+    private removeLastMoveHighlight(squareId: string): void {
+        const square: HTMLElement | null = document.getElementById(squareId);
+        if (square) {
+            square.classList.remove("lastmove");
         }
     }
 }
