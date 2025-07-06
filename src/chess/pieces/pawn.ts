@@ -19,12 +19,12 @@ export class Pawn extends Piece {
             const y: number = this.position.y + direction.y;
             if (isWithinBoard({ x, y })) {
                 returnValue.push({ x, y });
-            }
-
-            if (!this.state.hasMoved) {
-                const doubleY = y + direction.y;
-                if (isWithinBoard({ x, y: doubleY })) {
-                    returnValue.push({ x, y: doubleY });
+                if (!this.state.hasMoved && direction.x === 0) {
+                    const doubleY: number = this.position.y + 2 * direction.y;
+                    const doubleMovePos = { x: this.position.x, y: doubleY };
+                    if (isWithinBoard(doubleMovePos)) {
+                        returnValue.push(doubleMovePos);
+                    }
                 }
             }
         }
@@ -36,7 +36,6 @@ export class Pawn extends Piece {
                 returnValue.push({ x, y });
             }
         }
-
         return returnValue;
     }
 

@@ -1,0 +1,61 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    min-width: 100%;
+    overflow-x: auto;
+}
+
+body {
+    background: radial-gradient(ellipse at 60% 40%, var(--color-bg-alt) 0%, var(--color-bg) 100%);
+    color: var(--color-text);
+    margin: 0;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    min-height: 100vh;
+    width: 100%;
+    overflow-x: auto;
+}
+
+.button {
+    background: var(--color-button-bg, #333a40);
+    color: var(--color-text);
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    margin: 5px 0;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+}
+
+.button:hover:enabled {
+    background: var(--color-button-hover, #444e57);
+}
+
+.button:disabled {
+    background: var(--color-button-disabled);
+    color: var(--color-button-disabled-text);
+    cursor: not-allowed;
+}
+
+footer {
+    margin-top: 60px;
+    color: var(--color-footer-text);
+    font-size: 0.95em;
+    text-align: center;
+    width: 100%;
+}
+
+.footer-text a {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.footer-text a:hover {
+    color: var(--color-text);
+}

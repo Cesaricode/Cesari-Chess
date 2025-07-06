@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import { FILES } from "../chess/constants/board.js";
 import { GameFactory } from "../chess/game/game-factory.js";
 import { MoveValidator } from "../chess/rules/move-validator.js";
+import { Color } from "../chess/types/color.js";
 import { BoardEventManager } from "../ui/board-event-manager.js";
 import { UiRenderer } from "../ui/ui-renderer.js";
 import { ControlEventManager } from "../ui/control-event-manager.js";
@@ -29,6 +30,12 @@ export class GameController {
     }
     init() {
         this._ui.render(this._game);
+        const whitePlayer = this._localPlayer.color === Color.White ? this._localPlayer : this._remotePlayer;
+        const blackPlayer = this._localPlayer.color === Color.Black ? this._localPlayer : this._remotePlayer;
+        this._ui.renderPlayerNames(whitePlayer.name, blackPlayer.name);
+        this.setupEventListeners();
+    }
+    setupEventListeners() {
         this._boardEventManager.setupBoardEventListeners((file, rank) => __awaiter(this, void 0, void 0, function* () {
             if (!this._boardEnabled)
                 return;

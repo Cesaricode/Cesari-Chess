@@ -1,5 +1,6 @@
 import { FILES, RANKS } from "../chess/constants/board.js";
 import { GameStatus } from "../chess/types/game-status.js";
+import { moveToAlgebraic } from "../chess/util/move-to-algebraic.js";
 export class UiRenderer {
     constructor(statusElementId = "status") {
         const statusEl = document.getElementById(statusElementId);
@@ -16,6 +17,7 @@ export class UiRenderer {
         this.renderPieces(game);
         this.renderStatus(game.status, game.activeColor);
         this.highlightCheckSquare(game);
+        this.renderMoveHistory(game.moveHistory);
     }
     clearBoard() {
         for (const file of FILES) {
@@ -68,6 +70,19 @@ export class UiRenderer {
             [GameStatus.FiftyMoveRule]: "Draw by fifty-move rule."
         };
         this.statusElement.textContent = (_a = statusMessages[status]) !== null && _a !== void 0 ? _a : "Game ended.";
+    }
+    renderMoveHistory(moveHistory) {
+        const list = document.getElementById("moveHistoryList");
+        if (!list)
+            return;
+        list.innerHTML = "";
+        for (let i = 0; i < moveHistory.length; i += 2) {
+            const li = document.createElement("li");
+            const whiteMove = moveHistory[i];
+            const blackMove = moveHistory[i + 1];
+            li.textContent = `${moveToAlgebraic(whiteMove)}${blackMove ? " " + moveToAlgebraic(blackMove) : ""}`;
+            list.appendChild(li);
+        }
     }
     highlightSquare(squareId, type = "highlighted") {
         const square = document.getElementById(squareId);
@@ -159,6 +174,16 @@ export class UiRenderer {
         const square = document.getElementById(squareId);
         if (square) {
             square.classList.remove("lastmove");
+        }
+    }
+    renderPlayerNames(whiteName, blackName) {
+        const whiteNameEl = document.getElementById('playerWhiteName');
+        const blackNameEl = document.getElementById('playerBlackName');
+        if (whiteNameEl) {
+            whiteNameEl.textContent = `White: ${whiteName}`;
+        }
+        if (blackNameEl) {
+            blackNameEl.textContent = `Black: ${blackName}`;
         }
     }
 }

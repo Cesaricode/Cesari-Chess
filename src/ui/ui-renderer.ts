@@ -2,6 +2,8 @@ import { FILES, RANKS } from "../chess/constants/board.js";
 import { Game } from "../chess/game/game.js";
 import { Piece } from "../chess/pieces/piece.js";
 import { GameStatus } from "../chess/types/game-status.js";
+import { Move } from "../chess/types/move.js";
+import { moveToAlgebraic } from "../chess/util/move-to-algebraic.js";
 
 export class UiRenderer {
     private statusElement: HTMLElement;
@@ -22,6 +24,7 @@ export class UiRenderer {
         this.renderPieces(game);
         this.renderStatus(game.status, game.activeColor);
         this.highlightCheckSquare(game);
+        this.renderMoveHistory(game.moveHistory);
     }
 
     public clearBoard(): void {
@@ -76,6 +79,19 @@ export class UiRenderer {
         };
 
         this.statusElement.textContent = statusMessages[status] ?? "Game ended.";
+    }
+
+    public renderMoveHistory(moveHistory: Move[]): void {
+        const list: HTMLElement | null = document.getElementById("moveHistoryList");
+        if (!list) return;
+        list.innerHTML = "";
+        for (let i = 0; i < moveHistory.length; i += 2) {
+            const li: HTMLElement = document.createElement("li");
+            const whiteMove: Move = moveHistory[i];
+            const blackMove: Move = moveHistory[i + 1];
+            li.textContent = `${moveToAlgebraic(whiteMove)}${blackMove ? " " + moveToAlgebraic(blackMove) : ""}`;
+            list.appendChild(li);
+        }
     }
 
     public highlightSquare(squareId: string, type: "highlighted" | "targethighlighted" = "highlighted"): void {
@@ -174,6 +190,17 @@ export class UiRenderer {
         const square: HTMLElement | null = document.getElementById(squareId);
         if (square) {
             square.classList.remove("lastmove");
+        }
+    }
+
+    public renderPlayerNames(whiteName: string, blackName: string): void {
+        const whiteNameEl: HTMLElement | null = document.getElementById('playerWhiteName');
+        const blackNameEl: HTMLElement | null = document.getElementById('playerBlackName');
+        if (whiteNameEl) {
+            whiteNameEl.textContent = `White: ${whiteName}`;
+        }
+        if (blackNameEl) {
+            blackNameEl.textContent = `Black: ${blackName}`;
         }
     }
 }

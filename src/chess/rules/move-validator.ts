@@ -66,8 +66,16 @@ export class MoveValidator {
             return false;
         }
 
-        if (dx === 0 && !target) {
+        if (dx === 0 && dy === direction && !target) {
             return true;
+        }
+
+        if (
+            dx === 0 &&
+            dy === 2 * direction &&
+            !target
+        ) {
+            return MoveValidator.isPathClear(game, move);
         }
 
         return false;

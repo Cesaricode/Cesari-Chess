@@ -1,0 +1,19 @@
+:root {
+    --color-bg: #181a1b;
+    --color-bg-alt: #232526;
+    --color-board-dark: #B58863;
+    --color-board-light: #F0D9B5;
+    --color-accent: #f6f669;
+    --color-text: #f0f0f0;
+    --color-text-muted: #b0b0b0;
+    --color-button-bg: #333a40;
+    --color-button-hover: #444e57;
+    --color-button-disabled: #222;
+    --color-button-disabled-text: #888;
+    --color-menu-flavour: #b0b0b0;
+    --color-menu-flavour-soon: #f6f669;
+    --color-highlight: rgb(78, 122, 29);
+    --color-lastmove: rgba(246, 246, 105, 0.65);
+    --color-check-highlight: rgba(255, 0, 0, 0.45);
+    --color-footer-text: #666;
+}

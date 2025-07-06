@@ -40,6 +40,13 @@ export class GameController {
 
     private init(): void {
         this._ui.render(this._game);
+        const whitePlayer: Player = this._localPlayer.color === Color.White ? this._localPlayer : this._remotePlayer;
+        const blackPlayer: Player = this._localPlayer.color === Color.Black ? this._localPlayer : this._remotePlayer;
+        this._ui.renderPlayerNames(whitePlayer.name, blackPlayer.name);
+        this.setupEventListeners();
+    }
+
+    private setupEventListeners(): void {
         this._boardEventManager.setupBoardEventListeners(async (file, rank) => {
             if (!this._boardEnabled) return;
             await this.handleSquareClick(file, rank);
