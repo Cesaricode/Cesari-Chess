@@ -67,7 +67,6 @@ export class GameControllerFactory {
             let replayGame = GameFactory.fromStartingPosition();
             for (const move of saveData.moveHistory) {
                 undoStack.push(replayGame.clone());
-                console.log("lsg", replayGame.clone());
                 replayGame.makeMove(move);
             }
             const localPlayer = PlayerFactory.createHumanPlayer("You", saveData.localColor);

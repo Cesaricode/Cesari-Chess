@@ -154,6 +154,7 @@ export class GameController {
     }
     attemptMove(move) {
         return __awaiter(this, void 0, void 0, function* () {
+            const targetPiece = this._game.board.getPieceAt(move.to);
             const gameClone = this._game.clone();
             if (this._game.makeMove(move)) {
                 this._undoStack.push(gameClone);
@@ -165,6 +166,18 @@ export class GameController {
                 this.highlightLastMove();
                 this.updateControlButtons();
                 this._ui.renderStatus(this._game.status, this._game.activeColor);
+                if (this._game.status !== "ongoing") {
+                    const endGameSound = new Audio("sounds/genericnotify.mp3");
+                    endGameSound.play();
+                }
+                else if (targetPiece && targetPiece.color !== move.color) {
+                    const captureSound = new Audio("sounds/capture.mp3");
+                    captureSound.play();
+                }
+                else {
+                    const moveSound = new Audio("sounds/move.mp3");
+                    moveSound.play();
+                }
                 this.updateSaveGameState();
                 yield this.tryBotMove();
             }

@@ -57,6 +57,8 @@ function showSetupModal(opponent: string): void {
         if (startType === "fen" && fen) {
             url += "&fen=" + encodeURIComponent(fen);
         }
+        sessionStorage.setItem("startNewGame", "1");
+        localStorage.removeItem("cesariChessSave");
         window.location.href = url;
     };
 }

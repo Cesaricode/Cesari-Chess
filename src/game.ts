@@ -16,6 +16,19 @@ function init() {
     const fen: string | null = getFENFromUrl();
     const color: Color | null = parseColor(colorParam);
     const continueValue: string | null = getContinueFromUrl();
+    const startNewGame: boolean = sessionStorage.getItem("startNewGame") === "1";
+    const hasSave: boolean = !!localStorage.getItem("cesariChessSave");
+    if (!startNewGame && continueValue === "1" && hasSave) {
+        GameControllerFactory.loadSavedGame();
+        return;
+    }
+
+    if (!startNewGame && !continueValue && hasSave) {
+        GameControllerFactory.loadSavedGame();
+        return;
+    }
+
+    sessionStorage.removeItem("startNewGame");
 
     if (continueValue === "1") {
         GameControllerFactory.loadSavedGame();
