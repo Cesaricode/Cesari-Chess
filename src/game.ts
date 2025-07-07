@@ -1,20 +1,45 @@
 import { Color } from "./chess/types/color.js";
 import { GameControllerFactory } from "./controller/game-controller-factory.js";
 import { PlayerFactory } from "./player/player-factory.js";
-import { getModeFromUrl } from "./util/url.js";
+import { getColorFromUrl, getContinueFromUrl, getFENFromUrl, getModeFromUrl } from "./util/url.js";
+
+function parseColor(color: string | null): Color | null {
+    if (!color) return null;
+    if (color.toLowerCase() === "white") return Color.White;
+    if (color.toLowerCase() === "black") return Color.Black;
+    return null;
+}
 
 function init() {
     const mode: string = getModeFromUrl();
+    const colorParam: string = getColorFromUrl();
+    const fen: string | null = getFENFromUrl();
+    const color: Color | null = parseColor(colorParam);
+    const continueValue: string | null = getContinueFromUrl();
+
+    if (continueValue === "1") {
+        GameControllerFactory.loadSavedGame();
+        return;
+    }
+
     if (mode === "self") {
-        GameControllerFactory.createLocalVsLocal();
+        if (fen) GameControllerFactory.createLocalVsLocalFromFEN(fen, color ?? undefined);
+        else GameControllerFactory.createLocalVsLocal(color ?? undefined);
     } else if (mode === "randy") {
-        GameControllerFactory.createLocalVsBot(PlayerFactory.createRandyBot(Color.Black));
+        const botColor = color === Color.Black ? Color.White : Color.Black;
+        if (fen) GameControllerFactory.createLocalVsBotFromFEN(PlayerFactory.createRandyBot(botColor), fen, color ?? undefined);
+        else GameControllerFactory.createLocalVsBot(PlayerFactory.createRandyBot(botColor), color ?? undefined);
     } else if (mode === "stockfish") {
-        GameControllerFactory.createLocalVsBot(PlayerFactory.createStockfishBot(Color.Black));
+        const botColor = color === Color.Black ? Color.White : Color.Black;
+        if (fen) GameControllerFactory.createLocalVsBotFromFEN(PlayerFactory.createStockfishBot(botColor), fen, color ?? undefined);
+        else GameControllerFactory.createLocalVsBot(PlayerFactory.createStockfishBot(botColor), color ?? undefined);
     } else if (mode === "cesaribot") {
-        GameControllerFactory.createLocalVsBot(PlayerFactory.createRandyBot(Color.Black));
+        const botColor = color === Color.Black ? Color.White : Color.Black;
+        if (fen) GameControllerFactory.createLocalVsBotFromFEN(PlayerFactory.createRandyBot(botColor), fen, color ?? undefined);
+        else GameControllerFactory.createLocalVsBot(PlayerFactory.createRandyBot(botColor), color ?? undefined);
     } else {
-        GameControllerFactory.createLocalVsLocal();
+        if (fen) GameControllerFactory.createLocalVsLocalFromFEN(fen, color ?? undefined);
+        else GameControllerFactory.createLocalVsLocal(color ?? undefined);
     }
 }
 

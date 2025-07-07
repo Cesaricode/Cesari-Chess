@@ -1,6 +1,7 @@
 import { FILES, RANKS } from "../chess/constants/board.js";
+import { GameFactory } from "../chess/game/game-factory.js";
 import { GameStatus } from "../chess/types/game-status.js";
-import { moveToAlgebraic } from "../chess/util/move-to-algebraic.js";
+import { moveToSAN } from "../chess/util/move-to-san.js";
 export class UiRenderer {
     constructor(statusElementId = "status") {
         const statusEl = document.getElementById(statusElementId);
@@ -12,12 +13,11 @@ export class UiRenderer {
             board.addEventListener("contextmenu", (e) => e.preventDefault());
         }
     }
-    render(game) {
+    render(game, activeMoveIndex) {
         this.clearBoard();
         this.renderPieces(game);
-        this.renderStatus(game.status, game.activeColor);
         this.highlightCheckSquare(game);
-        this.renderMoveHistory(game.moveHistory);
+        this.renderMoveHistory(game.moveHistory, game, activeMoveIndex);
     }
     clearBoard() {
         for (const file of FILES) {
@@ -71,18 +71,67 @@ export class UiRenderer {
         };
         this.statusElement.textContent = (_a = statusMessages[status]) !== null && _a !== void 0 ? _a : "Game ended.";
     }
-    renderMoveHistory(moveHistory) {
-        const list = document.getElementById("moveHistoryList");
-        if (!list)
+    renderMoveHistory(moveHistory, game, activeMoveIndex) {
+        const grid = document.getElementById("moveHistoryGrid");
+        if (!grid)
             return;
-        list.innerHTML = "";
+        grid.innerHTML = "";
+        let simulatedGame = GameFactory.fromFEN(game.initialFEN);
         for (let i = 0; i < moveHistory.length; i += 2) {
-            const li = document.createElement("li");
-            const whiteMove = moveHistory[i];
-            const blackMove = moveHistory[i + 1];
-            li.textContent = `${moveToAlgebraic(whiteMove)}${blackMove ? " " + moveToAlgebraic(blackMove) : ""}`;
-            list.appendChild(li);
+            const row = this.createMoveHistoryRow(moveHistory, simulatedGame, i, activeMoveIndex);
+            grid.appendChild(row.element);
+            simulatedGame = row.simulatedGame;
         }
+        this.scrollSelectedMoveIntoView();
+    }
+    createMoveHistoryRow(moveHistory, simulatedGame, index, activeMoveIndex) {
+        const moveNum = Math.floor(index / 2) + 1;
+        const whiteMove = moveHistory[index];
+        const blackMove = moveHistory[index + 1];
+        const row = document.createElement("div");
+        row.className = "move-history-row";
+        const numCell = document.createElement("span");
+        numCell.className = "move-history-col move-history-num";
+        numCell.textContent = moveNum.toString();
+        const whiteCell = this.createMoveHistoryCell(whiteMove, simulatedGame, "move-history-col move-history-white move-history-index", activeMoveIndex === index);
+        if (whiteMove) {
+            simulatedGame = simulatedGame.simulateMove(Object.assign(Object.assign({}, whiteMove), { color: simulatedGame.activeColor }));
+        }
+        const blackCell = this.createMoveHistoryCell(blackMove, simulatedGame, "move-history-col move-history-black move-history-index", activeMoveIndex === index + 1);
+        if (blackMove) {
+            simulatedGame = simulatedGame.simulateMove(Object.assign(Object.assign({}, blackMove), { color: simulatedGame.activeColor }));
+        }
+        row.appendChild(numCell);
+        row.appendChild(whiteCell);
+        row.appendChild(blackCell);
+        return { element: row, simulatedGame };
+    }
+    createMoveHistoryCell(move, simulatedGame, className, isSelected) {
+        const cell = document.createElement("span");
+        cell.className = className;
+        if (move) {
+            cell.textContent = moveToSAN(simulatedGame, move);
+            if (isSelected) {
+                cell.classList.add("selected");
+            }
+        }
+        else {
+            cell.textContent = "";
+        }
+        return cell;
+    }
+    scrollSelectedMoveIntoView() {
+        setTimeout(() => {
+            const selected = document.querySelector('.move-history-index.selected');
+            const roster = document.querySelector('.move-history-roster');
+            if (selected && roster) {
+                const selectedRect = selected.getBoundingClientRect();
+                const rosterRect = roster.getBoundingClientRect();
+                if (selectedRect.top < rosterRect.top || selectedRect.bottom > rosterRect.bottom) {
+                    selected.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                }
+            }
+        }, 0);
     }
     highlightSquare(squareId, type = "highlighted") {
         const square = document.getElementById(squareId);

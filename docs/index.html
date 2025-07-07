@@ -7,7 +7,7 @@
     <title>Cesari Chess - Home</title>
     <link rel="stylesheet" href="styles/colors.css">
     <link rel="stylesheet" href="styles/global.css">
-    <link rel="stylesheet" href="styles/homepage.css">
+    <link rel="stylesheet" href="styles/index.css">
     <link rel="icon" href="./icons/wK.svg" type="image/x-icon">
     <script type="module" src="index.js" defer></script>
 </head>
@@ -34,10 +34,38 @@
                 <button onclick="window.location.href='game.html?mode=cesaribot'" class="button" disabled>Play vs Cesari-Bot</button>
                 <span class="menu-flavour coming-soon">(Coming Soon)</span>
             </div>
+            <div class="menu-row">
+                <button class="button" id="continueBtn" disabled="true">Continue Game</button>
+                <span class="menu-flavour coming-soon"></span>
+            </div>
         </div>
         <footer>
             <p class="footer-text">© 2025 Cesari Chess &middot; <a href="https://github.com/Cesaricode/Cesari-Chess" target="_blank">GitHub</a></p>
         </footer>
+    </div>
+
+    <div id="setupModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h2>Game Setup</h2>
+            <label>
+                Color:
+                <select id="colorSelect">
+                    <option value="white">White</option>
+                    <option value="black">Black</option>
+                    <option value="random">Random</option>
+                </select>
+            </label>
+            <label>
+                Start Position:
+                <select id="startTypeSelect">
+                    <option value="standard">Standard</option>
+                    <option value="fen">From FEN</option>
+                </select>
+            </label>
+            <input id="fenInput" type="text" placeholder="Paste FEN here" style="display:none; width:100%; margin-top:8px;" />
+            <button id="startGameBtn" class="button">Start Game</button>
+            <button id="cancelSetupBtn" class="button">Cancel</button>
+        </div>
     </div>
 </body>
 

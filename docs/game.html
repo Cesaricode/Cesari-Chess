@@ -25,8 +25,19 @@
     </div>
     <div id="body">
         <div id="moveHistory">
-            <h3>Move History</h3>
-            <ol id="moveHistoryList"></ol>
+            <div class="move-history-controls">
+                <button id="moveHistoryBackBtn" title="Back" class="move-history-btn">⟵</button>
+                <button id="moveHistoryToCurrentBtn" title="To Current" class="move-history-btn">⟳</button>
+                <button id="moveHistoryForwardBtn" title="Forward" class="move-history-btn">⟶</button>
+            </div>
+            <div class="move-history-roster">
+                <div class="move-history-header">
+                    <span class="move-history-col move-history-num">#</span>
+                    <span class="move-history-col move-history-white">White</span>
+                    <span class="move-history-col move-history-black">Black</span>
+                </div>
+                <div id="moveHistoryGrid"></div>
+            </div>
         </div>
         <div id="chessBoardContainer">
             <div id="chessBoard">
@@ -162,11 +173,11 @@
             </div>
         </div>
         <div id="controls">
-            <button id="undoBtn" class="button">
+            <button id="undoBtn" class="button" disabled="true">
                 <span class="btn-icon" aria-hidden="true"><img src="./icons/undo.svg"></span>
                 <span class="btn-label">Undo</span>
             </button>
-            <button id="redoBtn" class="button">
+            <button id="redoBtn" class="button" disabled="true">
                 <span class="btn-icon" aria-hidden="true"><img src="./icons/redo.svg"></span>
                 <span class="btn-label">Redo</span>
             </button>

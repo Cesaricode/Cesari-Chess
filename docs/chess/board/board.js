@@ -36,6 +36,7 @@ export class Board {
         this.setPieceAt(from, null);
         pawn.promote();
         const promoted = PieceFactory.create(promotion, pawn.color, to);
+        promoted.state.hasMoved = true;
         this.setPieceAt(to, promoted);
     }
     getAllPieces() {

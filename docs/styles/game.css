@@ -9,7 +9,7 @@
 }
 
 #moveHistory {
-    width: 210px;
+    width: 260px;
     min-height: 640px;
     margin-right: 0;
     background: var(--color-bg-alt);
@@ -25,6 +25,83 @@
     align-items: center;
 }
 
+.move-history-roster {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 180px;
+    background: var(--color-bg);
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.10);
+    padding: 10px 8px;
+    gap: 0;
+    height: 600px;
+    overflow-y: auto;
+    direction: rtl;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-accent) var(--color-bg);
+}
+
+.move-history-roster>* {
+    direction: ltr;
+}
+
+.move-history-roster::-webkit-scrollbar {
+    width: 8px;
+    background: var(--color-bg);
+}
+
+.move-history-roster::-webkit-scrollbar-thumb {
+    background: var(--color-accent);
+    border-radius: 6px;
+}
+
+.move-history-roster::-webkit-scrollbar-track {
+    background: var(--color-bg);
+    border-radius: 6px;
+}
+
+.move-history-header {
+    display: grid;
+    grid-template-columns: 32px 1fr 1fr;
+    font-weight: bold;
+    color: var(--color-accent);
+    margin-bottom: 6px;
+    font-size: 1.05em;
+    letter-spacing: 0.5px;
+}
+
+.move-history-col {
+    padding: 2px 6px;
+    text-align: center;
+}
+
+#moveHistoryGrid {
+    display: grid;
+    grid-template-columns: 32px 1fr 1fr;
+    gap: 0;
+    font-size: 1em;
+    color: var(--color-text);
+}
+
+.move-history-row {
+    display: contents;
+}
+
+.move-history-num {
+    color: var(--color-accent);
+    font-weight: 600;
+}
+
+.move-history-white,
+.move-history-black {
+    text-align: center;
+    padding: 2px 6px;
+    min-width: 48px;
+    border-bottom: 1px solid var(--color-bg-alt);
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+}
+
 #moveHistory h3 {
     margin-top: 0;
     margin-bottom: 18px;
@@ -33,11 +110,12 @@
     letter-spacing: 1px;
 }
 
-#moveHistoryList {
-    padding-left: 18px;
-    width: 100%;
-    font-size: 1em;
-    color: var(--color-text);
+.move-history-row:nth-child(even) .move-history-col {
+    background: var(--color-bg-alt);
+}
+
+.move-history-row:nth-child(odd) .move-history-col {
+    background: transparent;
 }
 
 #controls {
@@ -47,7 +125,7 @@
     background: var(--color-bg-alt);
     border-radius: 14px;
     padding: 28px 20px 20px 20px;
-    width: 210px;
+    width: 260px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
     gap: 14px;
     margin-left: 0;
@@ -93,7 +171,7 @@
 
 .btn-label {
     display: inline-block;
-    margin-right: 8px;
+    margin-right: 13px;
 }
 
 .button:hover:enabled,
@@ -149,7 +227,8 @@ select#promote:focus {
     min-height: 32px;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
+    text-align: center;
 }
 
 #chessBoardContainer {
@@ -161,6 +240,14 @@ select#promote:focus {
     display: flex;
     flex-direction: column-reverse;
     margin-top: 40px;
+}
+
+.flipped #chessBoard {
+    flex-direction: column;
+}
+
+.flipped .row {
+    flex-direction: row-reverse;
 }
 
 .row {
@@ -217,21 +304,6 @@ select#promote:focus {
     z-index: 3;
 }
 
-.square.highlighted::after {
-    content: "";
-    display: block;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 22px;
-    height: 22px;
-    background: var(--color-highlight);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    z-index: 2;
-}
-
 .square.lastmove::after {
     content: "";
     display: block;
@@ -243,6 +315,21 @@ select#promote:focus {
     background: var(--color-lastmove);
     border-radius: 0;
     transform: none;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.square.highlighted::after {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 22px;
+    height: 22px;
+    background: var(--color-highlight);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
     pointer-events: none;
     z-index: 1;
 }
@@ -260,6 +347,35 @@ select#promote:focus {
     transform: translate(-50%, -50%);
     pointer-events: none;
     z-index: 2;
+}
+
+.square.lastmove.highlighted::after {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 200%;
+    background: var(--color-lastmove);
+    border-radius: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.square.lastmove.highlighted::before {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 22px;
+    height: 22px;
+    background: var(--color-highlight);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 3;
 }
 
 .square.checkhighlighted::after {
@@ -352,4 +468,82 @@ select#promote:focus {
 
 .player-black {
     border-right: 4px solid var(--color-accent);
+}
+
+.move-history-controls {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.move-history-btn {
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0 8px 4px;
+    border-radius: 6px;
+    border: 1.5px solid var(--color-bg-alt);
+    background: var(--color-button-bg, #333a40);
+    color: var(--color-text);
+    font-size: 1.48em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+    cursor: pointer;
+    transition:
+        background 0.18s,
+        color 0.18s,
+        box-shadow 0.18s,
+        border-color 0.18s,
+        transform 0.12s;
+    outline: none;
+}
+
+.move-history-btn:hover:enabled,
+.move-history-btn:focus-visible {
+    background: var(--color-accent);
+    color: #222;
+    border-color: var(--color-accent);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+    transform: translateY(-2px) scale(1.03);
+}
+
+.move-history-btn:active {
+    background: var(--color-accent);
+    color: #222;
+    border-color: var(--color-accent);
+    transform: scale(0.98);
+}
+
+.move-history-btn:disabled {
+    background: var(--color-button-disabled, #222);
+    color: var(--color-button-disabled-text, #888);
+    border-color: var(--color-bg-alt);
+    cursor: not-allowed;
+    opacity: 0.7;
+    box-shadow: none;
+}
+
+.move-history-index {
+    cursor: pointer !important;
+    transition:
+        background 0.13s,
+        color 0.13s,
+        transform 0.10s;
+}
+
+.move-history-index:hover,
+.move-history-index:focus-visible {
+    background: rgba(246, 246, 105, 0.18);
+    color: inherit;
+    transform: scale(1.03);
+    outline: none;
+}
+
+.move-history-index.selected {
+    background: rgba(246, 246, 105, 0.32);
+    color: inherit;
+    font-weight: bold;
 }

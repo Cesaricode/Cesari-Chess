@@ -47,12 +47,15 @@ export class FEN {
         return game;
     }
 
-    public static parseBoardFromFEN(board: Board, placement: string): void {
+    public static parseBoardFromFEN(board: Board, fen: string): void {
+        const [placement] = fen.split(" ");
         const pieces: Piece[] = [];
         const rows: string[] = placement.split("/");
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             let x: number = 0;
-            for (const char of rows[y]) {
+            const fenRow = rows[y];
+            const boardY = BOARD_HEIGHT - 1 - y;
+            for (const char of fenRow) {
                 if (/\d/.test(char)) {
                     x += parseInt(char, 10);
                 } else {
@@ -65,11 +68,17 @@ export class FEN {
                         color = Color.Black;
                         type = Object.entries(FEN_PIECE_SYMBOLS.black).find(([, v]) => v === char)?.[0] as PieceType;
                     }
-                    if (type) {
-                        pieces.push(PieceFactory.create(type, color, { x, y }));
+                    if (type && x < BOARD_WIDTH) {
+                        pieces.push(PieceFactory.create(type, color, { x, y: boardY }));
                     }
                     x++;
                 }
+                if (x > BOARD_WIDTH) {
+                    throw new Error(`FEN row ${y} overflows board width: ${placement}`);
+                }
+            }
+            if (x !== BOARD_WIDTH) {
+                throw new Error(`FEN row ${y} does not fill board: ${placement}`);
             }
         }
         board.populateGrid(pieces);
@@ -125,7 +134,7 @@ export class FEN {
 
     private static parsePosition(pos: string): Position {
         const file: number = pos.charCodeAt(0) - "a".charCodeAt(0);
-        const rank: number = BOARD_HEIGHT - parseInt(pos[1], 10);
+        const rank: number = parseInt(pos[1], 10) - 1;
         return { x: file, y: rank };
     }
 

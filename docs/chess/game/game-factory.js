@@ -10,7 +10,7 @@ export class GameFactory {
     }
     static fromFEN(fen) {
         const board = BoardFactory.fromFEN(fen);
-        const game = new Game(board);
+        const game = new Game(board, undefined, fen);
         FEN.parseGameStateFromFEN(game, fen);
         return game;
     }

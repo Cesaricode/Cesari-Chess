@@ -1,36 +1,36 @@
 import { FILES, RANKS } from "../chess/constants/board.js";
+import { GameFactory } from "../chess/game/game-factory.js";
 import { Game } from "../chess/game/game.js";
 import { Piece } from "../chess/pieces/piece.js";
 import { GameStatus } from "../chess/types/game-status.js";
 import { Move } from "../chess/types/move.js";
-import { moveToAlgebraic } from "../chess/util/move-to-algebraic.js";
+import { moveToSAN } from "../chess/util/move-to-san.js";
 
 export class UiRenderer {
     private statusElement: HTMLElement;
 
     public constructor(statusElementId: string = "status") {
-        const statusEl = document.getElementById(statusElementId);
+        const statusEl: HTMLElement | null = document.getElementById(statusElementId);
         if (!statusEl) throw new Error("UI status element not found");
         this.statusElement = statusEl;
 
-        const board = document.getElementById("chessBoard");
+        const board: HTMLElement | null = document.getElementById("chessBoard");
         if (board) {
             board.addEventListener("contextmenu", (e) => e.preventDefault());
         }
     }
 
-    public render(game: Game): void {
+    public render(game: Game, activeMoveIndex: number | null): void {
         this.clearBoard();
         this.renderPieces(game);
-        this.renderStatus(game.status, game.activeColor);
         this.highlightCheckSquare(game);
-        this.renderMoveHistory(game.moveHistory);
+        this.renderMoveHistory(game.moveHistory, game, activeMoveIndex);
     }
 
     public clearBoard(): void {
         for (const file of FILES) {
             for (const rank of RANKS) {
-                const square = document.getElementById(`${file}${rank}`);
+                const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
                 if (square) square.innerHTML = "";
             }
         }
@@ -40,9 +40,9 @@ export class UiRenderer {
         for (const piece of game.board.getAllPieces()) {
             if (!piece.isActive()) continue;
             const { x, y } = piece.position;
-            const file = FILES[x];
-            const rank = y + 1;
-            const square = document.getElementById(`${file}${rank}`);
+            const file: typeof FILES[number] = FILES[x];
+            const rank: number = y + 1;
+            const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
             if (square) {
                 square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="false" />`;
             }
@@ -59,7 +59,7 @@ export class UiRenderer {
             knight: "N",
             pawn: "P"
         };
-        const typeLetter = typeMap[piece.type];
+        const typeLetter: string = typeMap[piece.type];
         return `/icons/${colorPrefix}${typeLetter}.svg`;
     }
 
@@ -81,17 +81,96 @@ export class UiRenderer {
         this.statusElement.textContent = statusMessages[status] ?? "Game ended.";
     }
 
-    public renderMoveHistory(moveHistory: Move[]): void {
-        const list: HTMLElement | null = document.getElementById("moveHistoryList");
-        if (!list) return;
-        list.innerHTML = "";
+    public renderMoveHistory(moveHistory: Move[], game: Game, activeMoveIndex: number | null): void {
+        const grid: HTMLElement | null = document.getElementById("moveHistoryGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+
+        let simulatedGame: Game = GameFactory.fromFEN(game.initialFEN);
+
         for (let i = 0; i < moveHistory.length; i += 2) {
-            const li: HTMLElement = document.createElement("li");
-            const whiteMove: Move = moveHistory[i];
-            const blackMove: Move = moveHistory[i + 1];
-            li.textContent = `${moveToAlgebraic(whiteMove)}${blackMove ? " " + moveToAlgebraic(blackMove) : ""}`;
-            list.appendChild(li);
+            const row = this.createMoveHistoryRow(moveHistory, simulatedGame, i, activeMoveIndex);
+            grid.appendChild(row.element);
+            simulatedGame = row.simulatedGame;
         }
+        this.scrollSelectedMoveIntoView();
+    }
+
+    private createMoveHistoryRow(
+        moveHistory: Move[],
+        simulatedGame: Game,
+        index: number,
+        activeMoveIndex: number | null
+    ): { element: HTMLDivElement, simulatedGame: Game; } {
+        const moveNum: number = Math.floor(index / 2) + 1;
+        const whiteMove: Move = moveHistory[index];
+        const blackMove: Move = moveHistory[index + 1];
+
+        const row: HTMLDivElement = document.createElement("div");
+        row.className = "move-history-row";
+
+        const numCell: HTMLSpanElement = document.createElement("span");
+        numCell.className = "move-history-col move-history-num";
+        numCell.textContent = moveNum.toString();
+
+        const whiteCell: HTMLSpanElement = this.createMoveHistoryCell(
+            whiteMove,
+            simulatedGame,
+            "move-history-col move-history-white move-history-index",
+            activeMoveIndex === index
+        );
+        if (whiteMove) {
+            simulatedGame = simulatedGame.simulateMove({ ...whiteMove, color: simulatedGame.activeColor });
+        }
+
+        const blackCell: HTMLSpanElement = this.createMoveHistoryCell(
+            blackMove,
+            simulatedGame,
+            "move-history-col move-history-black move-history-index",
+            activeMoveIndex === index + 1
+        );
+        if (blackMove) {
+            simulatedGame = simulatedGame.simulateMove({ ...blackMove, color: simulatedGame.activeColor });
+        }
+
+        row.appendChild(numCell);
+        row.appendChild(whiteCell);
+        row.appendChild(blackCell);
+
+        return { element: row, simulatedGame };
+    }
+
+    private createMoveHistoryCell(
+        move: Move | undefined,
+        simulatedGame: Game,
+        className: string,
+        isSelected: boolean
+    ): HTMLSpanElement {
+        const cell: HTMLSpanElement = document.createElement("span");
+        cell.className = className;
+        if (move) {
+            cell.textContent = moveToSAN(simulatedGame, move);
+            if (isSelected) {
+                cell.classList.add("selected");
+            }
+        } else {
+            cell.textContent = "";
+        }
+        return cell;
+    }
+
+    private scrollSelectedMoveIntoView(): void {
+        setTimeout(() => {
+            const selected: HTMLElement | null = document.querySelector('.move-history-index.selected');
+            const roster: HTMLElement | null = document.querySelector('.move-history-roster');
+            if (selected && roster) {
+                const selectedRect: DOMRect = selected.getBoundingClientRect();
+                const rosterRect: DOMRect = roster.getBoundingClientRect();
+                if (selectedRect.top < rosterRect.top || selectedRect.bottom > rosterRect.bottom) {
+                    selected.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                }
+            }
+        }, 0);
     }
 
     public highlightSquare(squareId: string, type: "highlighted" | "targethighlighted" = "highlighted"): void {

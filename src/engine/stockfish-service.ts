@@ -2,7 +2,7 @@ import { Game } from "../chess/game/game.js";
 import { Move } from "../chess/types/move.js";
 import { FEN } from "../chess/util/fen.js";
 import { parseUciMoveToMoveObject } from "../chess/util/uci.js";
-import { StockfishApiResponse } from "./stockfish-interface.js";
+import { StockfishApiResponse } from "./stockfish-api-interface.js";
 
 export class StockfishService {
     static apiUrl: string = "https://stockfish.online/api/s/v2.php";

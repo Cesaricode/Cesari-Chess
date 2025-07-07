@@ -14,14 +14,20 @@ import { Color } from "../chess/types/color.js";
 import { BoardEventManager } from "../ui/board-event-manager.js";
 import { UiRenderer } from "../ui/ui-renderer.js";
 import { ControlEventManager } from "../ui/control-event-manager.js";
+import { HistoryEventManager } from "../ui/history-event-manager.js";
+import { FEN } from "../chess/util/fen.js";
 export class GameController {
     constructor(localPlayer, remotePlayer, game) {
         this._boardEventManager = new BoardEventManager();
         this._controlEventManager = new ControlEventManager();
+        this._historyEventManager = new HistoryEventManager();
         this._undoStack = [];
         this._redoStack = [];
+        this._historyIndex = null;
+        this._lastHistoryIndex = null;
         this._selectedSquare = null;
-        this._boardEnabled = true;
+        this._isBoardEnabled = true;
+        this._isBoardFlipped = false;
         this._localPlayer = localPlayer;
         this._remotePlayer = remotePlayer;
         this._ui = new UiRenderer();
@@ -29,22 +35,38 @@ export class GameController {
         this.init();
     }
     init() {
-        this._ui.render(this._game);
-        const whitePlayer = this._localPlayer.color === Color.White ? this._localPlayer : this._remotePlayer;
-        const blackPlayer = this._localPlayer.color === Color.Black ? this._localPlayer : this._remotePlayer;
-        this._ui.renderPlayerNames(whitePlayer.name, blackPlayer.name);
-        this.setupEventListeners();
+        return __awaiter(this, void 0, void 0, function* () {
+            this.renderAppropriateGameState();
+            const whitePlayer = this._localPlayer.color === Color.White ? this._localPlayer : this._remotePlayer;
+            const blackPlayer = this._localPlayer.color === Color.Black ? this._localPlayer : this._remotePlayer;
+            this._ui.renderPlayerNames(whitePlayer.name, blackPlayer.name);
+            this.setupEventListeners();
+            if (this._localPlayer.color === Color.Black) {
+                this.setBoardFlipped(true);
+            }
+            if (this._game.activeColor !== this._localPlayer.color) {
+                yield this.tryBotMove();
+            }
+            this._ui.renderStatus(this._game.status, this._game.activeColor);
+        });
     }
     setupEventListeners() {
         this._boardEventManager.setupBoardEventListeners((file, rank) => __awaiter(this, void 0, void 0, function* () {
-            if (!this._boardEnabled)
+            if (!this._isBoardEnabled)
                 return;
             yield this.handleSquareClick(file, rank);
         }));
         this._controlEventManager.setupControlEventListeners({
             onUndo: () => this.undo(),
             onRedo: () => this.redo(),
-            onHome: () => window.location.href = "index.html"
+            onHome: () => window.location.href = "index.html",
+            onFlip: () => this.setBoardFlipped(!this._isBoardFlipped)
+        });
+        this._historyEventManager.setupControlEventListeners({
+            onGoBack: () => this.goBackInHistory(),
+            onGoForward: () => this.goForwardInHistory(),
+            onReset: () => this.resetHistoryView(),
+            onGoTo: (index) => this.goToHistoryIndex(index)
         });
     }
     handleSquareClick(file, rank) {
@@ -56,7 +78,7 @@ export class GameController {
             else {
                 yield this.handleSecondSquareClick(pos);
             }
-            this._ui.render(this._game);
+            this.resetHistoryView();
             if (this._game.status !== "ongoing") {
                 this._boardEventManager.removeBoardEventListeners();
             }
@@ -88,7 +110,7 @@ export class GameController {
                 this.selectNewPiece(toPiece, to);
                 return;
             }
-            if (fromPiece) {
+            if (fromPiece !== null && this._historyIndex === null) {
                 const move = this.buildMoveObject(fromPiece, from, to);
                 yield this.attemptMove(move);
                 this._ui.resetSelectHighlights();
@@ -139,12 +161,22 @@ export class GameController {
                 this._selectedSquare = null;
                 this._ui.resetHighlights();
                 this._ui.resetSelectHighlights();
-                this._ui.render(this._game);
+                this.renderAppropriateGameState();
                 this.highlightLastMove();
                 this.updateControlButtons();
+                this._ui.renderStatus(this._game.status, this._game.activeColor);
+                this.updateSaveGameState();
                 yield this.tryBotMove();
             }
         });
+    }
+    updateSaveGameState() {
+        if (this._game.status === "ongoing") {
+            this.saveGameState();
+        }
+        else {
+            localStorage.removeItem("cesariChessSave");
+        }
     }
     tryBotMove() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -232,7 +264,7 @@ export class GameController {
         this._game = this._undoStack.pop();
         this._ui.resetHighlights();
         this._ui.resetSelectHighlights();
-        this._ui.render(this._game);
+        this.renderAppropriateGameState();
         this.highlightLastMove();
         this.updateControlButtons();
     }
@@ -246,17 +278,132 @@ export class GameController {
         this._game = this._redoStack.pop();
         this._ui.resetHighlights();
         this._ui.resetSelectHighlights();
-        this._ui.render(this._game);
+        this.renderAppropriateGameState();
         this.highlightLastMove();
         this.updateControlButtons();
     }
     enableBoard() {
-        this._boardEnabled = true;
+        this._isBoardEnabled = true;
     }
     disableBoard() {
-        this._boardEnabled = false;
+        this._isBoardEnabled = false;
     }
     updateControlButtons() {
         this._controlEventManager.updateControlButtons(this._undoStack.length > 0, this._redoStack.length > 0, this._game.status === "ongoing");
+    }
+    renderAppropriateGameState() {
+        if ((this._lastHistoryIndex === null && this._historyIndex !== null) ||
+            (this._lastHistoryIndex !== null && this._historyIndex === null)) {
+            this._ui.resetHighlights();
+            this._ui.resetSelectHighlights();
+        }
+        this._lastHistoryIndex = this._historyIndex;
+        const { gameToRender, activeMoveIndex } = this.getDisplayGameAndMoveIndex();
+        this._ui.render(gameToRender, activeMoveIndex);
+        this.highlightHistoryMove(gameToRender, activeMoveIndex);
+        this._historyEventManager.updateHistoryRoster();
+    }
+    getDisplayGameAndMoveIndex() {
+        if (this._historyIndex === null) {
+            return {
+                gameToRender: this._game,
+                activeMoveIndex: this._game.moveHistory.length - 1
+            };
+        }
+        else {
+            const historyGame = this.getGameAtHistoryIndex(this._historyIndex).clone();
+            this.addMissingMovesToHistoryGame(historyGame);
+            const activeMoveIndex = this.calculateActiveMoveIndex(historyGame);
+            return { gameToRender: historyGame, activeMoveIndex };
+        }
+    }
+    addMissingMovesToHistoryGame(historyGame) {
+        const start = historyGame.moveHistory.length;
+        const missingMoves = this._game.moveHistory.slice(start);
+        for (const move of missingMoves) {
+            historyGame.addToMoveHistory(move);
+        }
+    }
+    calculateActiveMoveIndex(historyGame) {
+        var _a;
+        return historyGame.moveHistory.length - (this._game.moveHistory.length - ((_a = this._historyIndex) !== null && _a !== void 0 ? _a : 0)) - 1;
+    }
+    highlightHistoryMove(game, moveIndex) {
+        if (moveIndex !== null && moveIndex >= 0 && moveIndex < game.moveHistory.length) {
+            const move = game.moveHistory[moveIndex];
+            this._ui.highlightLastMove(FILES[move.from.x] + (move.from.y + 1), FILES[move.to.x] + (move.to.y + 1));
+        }
+        else {
+            this._ui.resetLastMoveHighlights();
+        }
+    }
+    getGameAtHistoryIndex(historyIndex) {
+        return this._undoStack[historyIndex];
+    }
+    goBackInHistory() {
+        this._selectedSquare = null;
+        if (this._undoStack.length === 0 || this._historyIndex !== null && this._historyIndex <= 0)
+            return;
+        if (this._historyIndex === null) {
+            this._historyIndex = this._undoStack.length - 1;
+        }
+        else {
+            this._historyIndex = this._historyIndex - 1;
+        }
+        this.renderAppropriateGameState();
+    }
+    goForwardInHistory() {
+        this._selectedSquare = null;
+        if (this._undoStack.length === 0)
+            return;
+        if (this._historyIndex === null) {
+            return;
+        }
+        else if (this._historyIndex === this._undoStack.length - 1) {
+            this._historyIndex = null;
+        }
+        else {
+            this._historyIndex = this._historyIndex + 1;
+        }
+        this.renderAppropriateGameState();
+    }
+    goToHistoryIndex(index) {
+        this._selectedSquare = null;
+        if (this._undoStack.length === 0 || index < 0 || index > this._undoStack.length)
+            return;
+        if (index === this._undoStack.length) {
+            this._historyIndex = null;
+        }
+        else {
+            this._historyIndex = index;
+        }
+        this.renderAppropriateGameState();
+    }
+    resetHistoryView() {
+        this._historyIndex = null;
+        this.renderAppropriateGameState();
+    }
+    setBoardFlipped(flipped) {
+        this._isBoardFlipped = flipped;
+        const boardContainer = document.getElementById("chessBoardContainer");
+        if (boardContainer) {
+            boardContainer.classList.toggle("flipped", this._isBoardFlipped);
+        }
+        this.renderAppropriateGameState();
+    }
+    saveGameState() {
+        if (!this._remotePlayer.isBot)
+            return;
+        const saveData = {
+            fen: FEN.serializeFullFEN(this._game),
+            moveHistory: this._game.moveHistory,
+            localColor: this._localPlayer.color,
+            botType: this._remotePlayer.name,
+            botColor: this._remotePlayer.color,
+        };
+        localStorage.setItem("cesariChessSave", JSON.stringify(saveData));
+    }
+    setUndoStack(stack) {
+        this._undoStack = stack;
     }
 }

@@ -1,5 +1,6 @@
 import { Board } from "../board/board.js";
 import { ChessClock } from "../clock/clock.js";
+import { STARTING_FEN } from "../constants/fen.js";
 import { FIFTY_MOVE_RULE_LIMIT, FIVEFOLD_REPETITION_COUNT, SEVENTYFIVE_MOVE_RULE_LIMIT, THREEFOLD_REPETITION_COUNT } from "../constants/game.js";
 import { King } from "../pieces/king.js";
 import { Piece } from "../pieces/piece.js";
@@ -20,6 +21,7 @@ export class Game implements GameState {
     private _status: GameStatus = GameStatus.Ongoing;
     private _moveHistory: Move[] = [];
     private _positionHistory: Map<string, number> = new Map();
+    private _initialFEN: string;
 
     private _gameState: GameState = {
         activeColor: Color.White,
@@ -34,9 +36,10 @@ export class Game implements GameState {
         }
     };
 
-    public constructor(board?: Board, clock?: ChessClock) {
+    public constructor(board?: Board, clock?: ChessClock, fen?: string) {
         this._board = board ?? new Board();
         this._clock = clock ?? new ChessClock();
+        this._initialFEN = fen ?? STARTING_FEN;
     }
 
     public makeMove(move: Move): boolean {
@@ -187,7 +190,7 @@ export class Game implements GameState {
         }
     }
 
-    private addToMoveHistory(move: Move): void {
+    public addToMoveHistory(move: Move): void {
         this._moveHistory.push(move);
         const fen: string = FEN.getRepetitionFEN(this);
         const count: number = this._positionHistory.get(fen) ?? 0;
@@ -251,7 +254,7 @@ export class Game implements GameState {
         return MoveValidator.isSquareAttacked(this, king.position, opponent);
     }
 
-    private hasLegalMoves(color: Color): boolean {
+    public hasLegalMoves(color: Color): boolean {
         const pieces: Piece[] = this._board.getPiecesByColor(color).filter(p => p.isActive());
         for (const piece of pieces) {
             const pseudoMoves: Position[] = piece.getPseudoLegalMoves();
@@ -353,35 +356,36 @@ export class Game implements GameState {
 
     public simulateMove(move: Move): Game {
         const clone: Game = this.clone();
+        const moveCopy: Move = { ...move };
 
-        clone.board.movePiece(move.from, move.to);
-
-        const movedPiece: Piece | null = clone.board.getPieceAt(move.to);
-        if (movedPiece && movedPiece.type === PieceType.Pawn && Math.abs(move.to.y - move.from.y) === 2) {
-            clone.enPassantTarget = { x: move.from.x, y: (move.from.y + move.to.y) / 2 };
-        } else {
-            clone.enPassantTarget = null;
-        }
-
-        if (movedPiece && movedPiece.type === PieceType.King) {
-            if (movedPiece.color === Color.White) {
-                clone.castlingRights.whiteKingSide = false;
-                clone.castlingRights.whiteQueenSide = false;
-            } else {
-                clone.castlingRights.blackKingSide = false;
-                clone.castlingRights.blackQueenSide = false;
+        if (!clone.handleSpecialMoves(moveCopy)) {
+            const captured: Piece | null = clone.board.getPieceAt(moveCopy.to);
+            if (captured) {
+                moveCopy.capturedPiece = captured.type;
             }
+            clone.board.movePiece(moveCopy.from, moveCopy.to);
+            clone.addToMoveHistory(moveCopy);
         }
-        if (movedPiece && movedPiece.type === PieceType.Rook) {
-            if (movedPiece.color === Color.White) {
-                if (move.from.x === 0 && move.from.y === 0) clone.castlingRights.whiteQueenSide = false;
-                if (move.from.x === 7 && move.from.y === 0) clone.castlingRights.whiteKingSide = false;
-            } else {
-                if (move.from.x === 0 && move.from.y === 7) clone.castlingRights.blackQueenSide = false;
-                if (move.from.x === 7 && move.from.y === 7) clone.castlingRights.blackKingSide = false;
-            }
-        }
+
+        clone.updateCastlingRights(moveCopy);
+        clone.updateHalfmoveClock(moveCopy);
+        clone.setEnPassantTarget(moveCopy);
+        clone.updateFullmoveNumber();
+        clone.switchActiveColor();
+
         return clone;
+    }
+
+    public isKingInCheckAfterMove(move: Move): boolean {
+        const simulated: Game = this.simulateMove(move);
+        const opponent: Color = move.color === Color.White ? Color.Black : Color.White;
+        return simulated.isKingInCheck(opponent);
+    }
+
+    public isKingInCheckmateAfterMove(move: Move): boolean {
+        const simulated: Game = this.simulateMove(move);
+        const opponent: Color = move.color === Color.White ? Color.Black : Color.White;
+        return simulated.isKingInCheck(opponent) && !simulated.hasLegalMoves(opponent);
     }
 
     public get board(): Board { return this._board; }
@@ -407,4 +411,6 @@ export class Game implements GameState {
 
     public get fullmoveNumber(): number { return this._gameState.fullmoveNumber; }
     public set fullmoveNumber(value: number) { this._gameState.fullmoveNumber = value; }
+
+    public get initialFEN(): string { return this._initialFEN; }
 }

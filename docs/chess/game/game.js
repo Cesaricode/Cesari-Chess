@@ -1,5 +1,6 @@
 import { Board } from "../board/board.js";
 import { ChessClock } from "../clock/clock.js";
+import { STARTING_FEN } from "../constants/fen.js";
 import { FIFTY_MOVE_RULE_LIMIT, FIVEFOLD_REPETITION_COUNT, SEVENTYFIVE_MOVE_RULE_LIMIT, THREEFOLD_REPETITION_COUNT } from "../constants/game.js";
 import { MoveValidator } from "../rules/move-validator.js";
 import { Color } from "../types/color.js";
@@ -7,7 +8,7 @@ import { GameStatus } from "../types/game-status.js";
 import { PieceType } from "../types/piece-type.js";
 import { FEN } from "../util/fen.js";
 export class Game {
-    constructor(board, clock) {
+    constructor(board, clock, fen) {
         this._status = GameStatus.Ongoing;
         this._moveHistory = [];
         this._positionHistory = new Map();
@@ -25,6 +26,7 @@ export class Game {
         };
         this._board = board !== null && board !== void 0 ? board : new Board();
         this._clock = clock !== null && clock !== void 0 ? clock : new ChessClock();
+        this._initialFEN = fen !== null && fen !== void 0 ? fen : STARTING_FEN;
     }
     makeMove(move) {
         this.assertOngoing();
@@ -317,39 +319,31 @@ export class Game {
     }
     simulateMove(move) {
         const clone = this.clone();
-        clone.board.movePiece(move.from, move.to);
-        const movedPiece = clone.board.getPieceAt(move.to);
-        if (movedPiece && movedPiece.type === PieceType.Pawn && Math.abs(move.to.y - move.from.y) === 2) {
-            clone.enPassantTarget = { x: move.from.x, y: (move.from.y + move.to.y) / 2 };
-        }
-        else {
-            clone.enPassantTarget = null;
-        }
-        if (movedPiece && movedPiece.type === PieceType.King) {
-            if (movedPiece.color === Color.White) {
-                clone.castlingRights.whiteKingSide = false;
-                clone.castlingRights.whiteQueenSide = false;
+        const moveCopy = Object.assign({}, move);
+        if (!clone.handleSpecialMoves(moveCopy)) {
+            const captured = clone.board.getPieceAt(moveCopy.to);
+            if (captured) {
+                moveCopy.capturedPiece = captured.type;
             }
-            else {
-                clone.castlingRights.blackKingSide = false;
-                clone.castlingRights.blackQueenSide = false;
-            }
+            clone.board.movePiece(moveCopy.from, moveCopy.to);
+            clone.addToMoveHistory(moveCopy);
         }
-        if (movedPiece && movedPiece.type === PieceType.Rook) {
-            if (movedPiece.color === Color.White) {
-                if (move.from.x === 0 && move.from.y === 0)
-                    clone.castlingRights.whiteQueenSide = false;
-                if (move.from.x === 7 && move.from.y === 0)
-                    clone.castlingRights.whiteKingSide = false;
-            }
-            else {
-                if (move.from.x === 0 && move.from.y === 7)
-                    clone.castlingRights.blackQueenSide = false;
-                if (move.from.x === 7 && move.from.y === 7)
-                    clone.castlingRights.blackKingSide = false;
-            }
-        }
+        clone.updateCastlingRights(moveCopy);
+        clone.updateHalfmoveClock(moveCopy);
+        clone.setEnPassantTarget(moveCopy);
+        clone.updateFullmoveNumber();
+        clone.switchActiveColor();
         return clone;
+    }
+    isKingInCheckAfterMove(move) {
+        const simulated = this.simulateMove(move);
+        const opponent = move.color === Color.White ? Color.Black : Color.White;
+        return simulated.isKingInCheck(opponent);
+    }
+    isKingInCheckmateAfterMove(move) {
+        const simulated = this.simulateMove(move);
+        const opponent = move.color === Color.White ? Color.Black : Color.White;
+        return simulated.isKingInCheck(opponent) && !simulated.hasLegalMoves(opponent);
     }
     get board() { return this._board; }
     get clock() { return this._clock; }
@@ -366,4 +360,5 @@ export class Game {
     set halfmoveClock(value) { this._gameState.halfmoveClock = value; }
     get fullmoveNumber() { return this._gameState.fullmoveNumber; }
     set fullmoveNumber(value) { this._gameState.fullmoveNumber = value; }
+    get initialFEN() { return this._initialFEN; }
 }

@@ -242,8 +242,8 @@ export class MoveValidator {
     }
 
     private static leavesKingInCheck(game: Game, move: Move): boolean {
-        const simulated: Game = game.simulateMove(move);
 
+        const simulated: Game = game.simulateMove(move);
         const king: King | undefined = simulated.board.getPiecesByColor(move.color).find(p => p.type === PieceType.King) as King | undefined;
         if (!king) {
             throw new Error("Programming error. King not found after move simulation");

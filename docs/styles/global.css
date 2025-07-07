@@ -7,6 +7,13 @@ body {
     width: 100%;
     min-width: 100%;
     overflow-x: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    cursor: default !important;
+    margin: 0;
+    padding: 0;
+    height: 100%;
 }
 
 body {
