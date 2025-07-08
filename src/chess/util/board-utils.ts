@@ -1,6 +1,7 @@
 import { Position } from "../types/position.js";
-import { BOARD_WIDTH, BOARD_HEIGHT } from "../constants/board.js";
+import { BOARD_WIDTH, BOARD_HEIGHT, FILES } from "../constants/board.js";
 import { Board } from "../board/board.js";
+import { Piece } from "../pieces/piece.js";
 
 export function isWithinBoard(pos: Position): boolean {
     return (
@@ -11,15 +12,14 @@ export function isWithinBoard(pos: Position): boolean {
     );
 }
 
-export function printBoard(board: Board): void {
-    const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
-    let output = "";
+export function printBoardToConsole(board: Board): void {
+    let output: string = "";
     for (let y = 7; y >= 0; y--) {
-        let row = "";
+        let row: string = "";
         for (let x = 0; x < 8; x++) {
-            const piece = board.getPieceAt({ x, y });
+            const piece: Piece | null = board.getPieceAt({ x, y });
             if (piece) {
-                const symbol = piece.type.charAt(0);
+                const symbol: string = piece.type.charAt(0);
                 row += piece.color === "white" ? symbol.toUpperCase() : symbol.toLowerCase();
             } else {
                 row += ".";

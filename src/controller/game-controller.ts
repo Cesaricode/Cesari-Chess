@@ -43,10 +43,9 @@ export class GameController {
         this._remotePlayer = remotePlayer;
         this._ui = new UiRenderer();
         this._game = game ?? GameFactory.fromStartingPosition();
-        this.init();
     }
 
-    private async init(): Promise<void> {
+    public async init(): Promise<void> {
         this.renderAppropriateGameState();
         const whitePlayer: Player = this._localPlayer.color === Color.White ? this._localPlayer : this._remotePlayer;
         const blackPlayer: Player = this._localPlayer.color === Color.Black ? this._localPlayer : this._remotePlayer;
@@ -72,7 +71,7 @@ export class GameController {
             onHome: () => window.location.href = "index.html",
             onFlip: () => this.setBoardFlipped(!this._isBoardFlipped)
         });
-        this._historyEventManager.setupControlEventListeners({
+        this._historyEventManager.setupHistoryEventListeners({
             onGoBack: () => this.goBackInHistory(),
             onGoForward: () => this.goForwardInHistory(),
             onReset: () => this.resetHistoryView(),
@@ -298,6 +297,7 @@ export class GameController {
         if (this._remotePlayer.isBot && this._game.activeColor === this._localPlayer.color) {
             this._redoStack.push(this._undoStack.pop()!);
         }
+        this._historyIndex = null;
         this._game = this._undoStack.pop()!;
         this._ui.resetHighlights();
         this._ui.resetSelectHighlights();
@@ -313,6 +313,7 @@ export class GameController {
         if (this._remotePlayer.isBot && this._game.activeColor === this._localPlayer.color) {
             this._undoStack.push(this._redoStack.pop()!);
         }
+        this._historyIndex = null;
         this._game = this._redoStack.pop()!;
         this._ui.resetHighlights();
         this._ui.resetSelectHighlights();
@@ -450,6 +451,7 @@ export class GameController {
 
         const saveData: SaveGameData = {
             fen: FEN.serializeFullFEN(this._game),
+            initialFen: this._game.initialFEN,
             moveHistory: this._game.moveHistory,
             localColor: this._localPlayer.color,
             botType: this._remotePlayer.name,

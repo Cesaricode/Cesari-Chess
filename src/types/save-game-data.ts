@@ -3,6 +3,7 @@ import { Move } from "../chess/types/move.js";
 
 export interface SaveGameData {
     fen: string;
+    initialFen: string;
     moveHistory: Move[];
     localColor: Color;
     botType: string;

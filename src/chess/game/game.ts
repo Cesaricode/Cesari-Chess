@@ -336,10 +336,12 @@ export class Game implements GameState {
         const clonedBoard: Board = this._board.clone();
         const clonedClock: ChessClock = this._clock.clone();
 
-        const clonedGame: Game = new Game(clonedBoard, clonedClock);
+        const clonedGame: Game = new Game(clonedBoard, clonedClock, this._initialFEN);
 
         clonedGame._status = this._status;
         clonedGame._moveHistory = this._moveHistory.map(m => ({ ...m }));
+
+        clonedGame._positionHistory = new Map(this._positionHistory);
 
         clonedGame._gameState = {
             activeColor: this._gameState.activeColor,
@@ -413,4 +415,5 @@ export class Game implements GameState {
     public set fullmoveNumber(value: number) { this._gameState.fullmoveNumber = value; }
 
     public get initialFEN(): string { return this._initialFEN; }
+    public set initialFEN(value: string) { this._initialFEN = value; }
 }

@@ -1,12 +1,11 @@
-import { BOARD_WIDTH, BOARD_HEIGHT } from "../constants/board.js";
+import { BOARD_WIDTH, BOARD_HEIGHT, FILES } from "../constants/board.js";
 export function isWithinBoard(pos) {
     return (pos.x >= 0 &&
         pos.x < BOARD_WIDTH &&
         pos.y >= 0 &&
         pos.y < BOARD_HEIGHT);
 }
-export function printBoard(board) {
-    const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
+export function printBoardToConsole(board) {
     let output = "";
     for (let y = 7; y >= 0; y--) {
         let row = "";

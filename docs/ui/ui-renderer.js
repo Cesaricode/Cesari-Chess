@@ -76,35 +76,87 @@ export class UiRenderer {
         if (!grid)
             return;
         grid.innerHTML = "";
+        const paddingCount = this.getHistoryMovePadding(game);
         let simulatedGame = GameFactory.fromFEN(game.initialFEN);
-        for (let i = 0; i < moveHistory.length; i += 2) {
-            const row = this.createMoveHistoryRow(moveHistory, simulatedGame, i, activeMoveIndex);
-            grid.appendChild(row.element);
-            simulatedGame = row.simulatedGame;
+        const fenParts = game.initialFEN.split(" ");
+        const startingColor = fenParts[1];
+        let rowNum = 1;
+        let pad = paddingCount;
+        let moveIndex = 0;
+        while (pad > 0) {
+            const row = document.createElement("div");
+            row.className = "move-history-row";
+            const numCell = document.createElement("span");
+            numCell.className = "move-history-col move-history-num";
+            numCell.textContent = rowNum.toString();
+            let whiteCell;
+            let blackCell;
+            if (pad >= 2) {
+                whiteCell = this.createEmptyMoveHistoryCell("move-history-col move-history-white move-history-index-empty");
+                blackCell = this.createEmptyMoveHistoryCell("move-history-col move-history-black move-history-index-empty");
+                pad -= 2;
+            }
+            else {
+                if (startingColor === "b") {
+                    whiteCell = this.createEmptyMoveHistoryCell("move-history-col move-history-white move-history-index-empty");
+                    blackCell = this.createMoveHistoryCell(moveHistory[moveIndex], simulatedGame, "move-history-col move-history-black move-history-index", activeMoveIndex === moveIndex);
+                    if (moveHistory[moveIndex]) {
+                        simulatedGame = simulatedGame.simulateMove(Object.assign(Object.assign({}, moveHistory[moveIndex]), { color: simulatedGame.activeColor }));
+                    }
+                    moveIndex++;
+                }
+                else {
+                    whiteCell = this.createMoveHistoryCell(moveHistory[moveIndex], simulatedGame, "move-history-col move-history-white move-history-index", activeMoveIndex === moveIndex);
+                    if (moveHistory[moveIndex]) {
+                        simulatedGame = simulatedGame.simulateMove(Object.assign(Object.assign({}, moveHistory[moveIndex]), { color: simulatedGame.activeColor }));
+                    }
+                    moveIndex++;
+                    blackCell = this.createEmptyMoveHistoryCell("move-history-col move-history-black move-history-index-empty");
+                }
+                pad = 0;
+            }
+            row.appendChild(numCell);
+            row.appendChild(whiteCell);
+            row.appendChild(blackCell);
+            if (!(whiteCell.classList.contains("move-history-index-empty") &&
+                blackCell.classList.contains("move-history-index-empty"))) {
+                grid.appendChild(row);
+            }
+            rowNum++;
+        }
+        for (; moveIndex < moveHistory.length; moveIndex += 2) {
+            const row = document.createElement("div");
+            row.className = "move-history-row";
+            const numCell = document.createElement("span");
+            numCell.className = "move-history-col move-history-num";
+            numCell.textContent = rowNum.toString();
+            const whiteMove = moveHistory[moveIndex];
+            const blackMove = moveHistory[moveIndex + 1];
+            const whiteCell = whiteMove
+                ? this.createMoveHistoryCell(whiteMove, simulatedGame, "move-history-col move-history-white move-history-index", activeMoveIndex === moveIndex)
+                : this.createEmptyMoveHistoryCell("move-history-col move-history-white move-history-index-empty");
+            if (whiteMove) {
+                simulatedGame = simulatedGame.simulateMove(Object.assign(Object.assign({}, whiteMove), { color: simulatedGame.activeColor }));
+            }
+            const blackCell = blackMove
+                ? this.createMoveHistoryCell(blackMove, simulatedGame, "move-history-col move-history-black move-history-index", activeMoveIndex === moveIndex + 1)
+                : this.createEmptyMoveHistoryCell("move-history-col move-history-black move-history-index-empty");
+            if (blackMove) {
+                simulatedGame = simulatedGame.simulateMove(Object.assign(Object.assign({}, blackMove), { color: simulatedGame.activeColor }));
+            }
+            row.appendChild(numCell);
+            row.appendChild(whiteCell);
+            row.appendChild(blackCell);
+            grid.appendChild(row);
+            rowNum++;
         }
         this.scrollSelectedMoveIntoView();
     }
-    createMoveHistoryRow(moveHistory, simulatedGame, index, activeMoveIndex) {
-        const moveNum = Math.floor(index / 2) + 1;
-        const whiteMove = moveHistory[index];
-        const blackMove = moveHistory[index + 1];
-        const row = document.createElement("div");
-        row.className = "move-history-row";
-        const numCell = document.createElement("span");
-        numCell.className = "move-history-col move-history-num";
-        numCell.textContent = moveNum.toString();
-        const whiteCell = this.createMoveHistoryCell(whiteMove, simulatedGame, "move-history-col move-history-white move-history-index", activeMoveIndex === index);
-        if (whiteMove) {
-            simulatedGame = simulatedGame.simulateMove(Object.assign(Object.assign({}, whiteMove), { color: simulatedGame.activeColor }));
-        }
-        const blackCell = this.createMoveHistoryCell(blackMove, simulatedGame, "move-history-col move-history-black move-history-index", activeMoveIndex === index + 1);
-        if (blackMove) {
-            simulatedGame = simulatedGame.simulateMove(Object.assign(Object.assign({}, blackMove), { color: simulatedGame.activeColor }));
-        }
-        row.appendChild(numCell);
-        row.appendChild(whiteCell);
-        row.appendChild(blackCell);
-        return { element: row, simulatedGame };
+    createEmptyMoveHistoryCell(className) {
+        const cell = document.createElement("span");
+        cell.className = className;
+        cell.textContent = "";
+        return cell;
     }
     createMoveHistoryCell(move, simulatedGame, className, isSelected) {
         const cell = document.createElement("span");
@@ -119,6 +171,15 @@ export class UiRenderer {
             cell.textContent = "";
         }
         return cell;
+    }
+    getHistoryMovePadding(game) {
+        const fenParts = game.initialFEN.split(" ");
+        const startingColor = fenParts[1];
+        const startingFullmove = parseInt(fenParts[5], 10);
+        let paddingCount = (startingFullmove - 1) * 2;
+        if (startingColor === "b")
+            paddingCount += 1;
+        return paddingCount;
     }
     scrollSelectedMoveIntoView() {
         setTimeout(() => {

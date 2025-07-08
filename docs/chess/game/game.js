@@ -304,9 +304,10 @@ export class Game {
     clone() {
         const clonedBoard = this._board.clone();
         const clonedClock = this._clock.clone();
-        const clonedGame = new Game(clonedBoard, clonedClock);
+        const clonedGame = new Game(clonedBoard, clonedClock, this._initialFEN);
         clonedGame._status = this._status;
         clonedGame._moveHistory = this._moveHistory.map(m => (Object.assign({}, m)));
+        clonedGame._positionHistory = new Map(this._positionHistory);
         clonedGame._gameState = {
             activeColor: this._gameState.activeColor,
             enPassantTarget: this._gameState.enPassantTarget
@@ -361,4 +362,5 @@ export class Game {
     get fullmoveNumber() { return this._gameState.fullmoveNumber; }
     set fullmoveNumber(value) { this._gameState.fullmoveNumber = value; }
     get initialFEN() { return this._initialFEN; }
+    set initialFEN(value) { this._initialFEN = value; }
 }

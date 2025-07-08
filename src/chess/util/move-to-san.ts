@@ -1,7 +1,7 @@
 import { Game } from "../game/game.js";
 import { Move } from "../types/move.js";
 import { PieceType } from "../types/piece-type.js";
-import { FILES, RANKS } from "../constants/board.js";
+import { FILES } from "../constants/board.js";
 import { MoveValidator } from "../rules/move-validator.js";
 import { Piece } from "../pieces/piece.js";
 import { Color } from "../types/color.js";

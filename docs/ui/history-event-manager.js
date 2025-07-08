@@ -12,25 +12,54 @@ export class HistoryEventManager {
         else
             this._historyRoster = null;
     }
-    setupControlEventListeners(handlers) {
+    setupHistoryEventListeners(handlers) {
         this._handlers = handlers;
-        if (this._goBackBtn)
-            this._goBackBtn.onclick = handlers.onGoBack;
-        if (this._goForwardBtn)
-            this._goForwardBtn.onclick = handlers.onGoForward;
+        if (this._goBackBtn) {
+            this.setupHoldableButton(this._goBackBtn, handlers.onGoBack);
+        }
+        if (this._goForwardBtn) {
+            this.setupHoldableButton(this._goForwardBtn, handlers.onGoForward);
+        }
         if (this._resetBtn)
             this._resetBtn.onclick = handlers.onReset;
-        this.setupHistoryEventListeners();
+        this.applyHistoryEventListeners();
     }
     updateHistoryRoster() {
         this.setupHistoryRoster("move-history-index");
-        this.setupHistoryEventListeners();
+        this.applyHistoryEventListeners();
     }
-    setupHistoryEventListeners() {
+    applyHistoryEventListeners() {
         if (this._historyRoster) {
             this._historyRoster.forEach((element, index) => {
                 element.onclick = () => { var _a; return (_a = this._handlers) === null || _a === void 0 ? void 0 : _a.onGoTo(index + 1); };
             });
         }
+    }
+    setupHoldableButton(btn, action) {
+        let interval;
+        let timeout;
+        const start = () => {
+            action();
+            timeout = window.setTimeout(() => {
+                interval = window.setInterval(action, 60);
+            }, 400);
+        };
+        const stop = () => {
+            if (timeout !== undefined)
+                clearTimeout(timeout);
+            if (interval !== undefined)
+                clearInterval(interval);
+            timeout = undefined;
+            interval = undefined;
+        };
+        btn.onmousedown = start;
+        btn.onmouseup = stop;
+        btn.onmouseleave = stop;
+        btn.onmouseout = stop;
+        btn.ontouchstart = start;
+        btn.ontouchend = stop;
+        btn.ontouchcancel = stop;
+        btn.onblur = stop;
+        btn.oncontextmenu = stop;
     }
 }

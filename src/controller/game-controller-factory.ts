@@ -11,72 +11,85 @@ export class GameControllerFactory {
 
     private constructor() { }
 
-    public static createLocalVsBot(bot: Player, color?: Color): GameController {
+    public static async createLocalVsBot(bot: Player, color?: Color): Promise<GameController> {
         const localColor: Color = color ?? Color.White;
         const botColor: Color = localColor === Color.White ? Color.Black : Color.White;
         if (bot.color !== botColor) {
             throw new Error(`Bot color mismatch: expected ${botColor}, got ${bot.color}`);
         }
         const localPlayer: Player = PlayerFactory.createHumanPlayer("You", localColor);
-        return new GameController(localPlayer, bot);
+        const controller: GameController = new GameController(localPlayer, bot);
+        await controller.init();
+        return controller;
     }
 
-    public static createLocalVsLocal(color?: Color): GameController {
+    public static async createLocalVsLocal(color?: Color): Promise<GameController> {
         const player1Color: Color = color ?? Color.White;
         const player2Color: Color = player1Color === Color.White ? Color.Black : Color.White;
         const player1: Player = PlayerFactory.createHumanPlayer("Player 1", player1Color);
         const player2: Player = PlayerFactory.createHumanPlayer("Player 2", player2Color);
-        return new GameController(player1, player2);
+        const controller: GameController = new GameController(player1, player2);
+        await controller.init();
+        return controller;
     }
 
-    public static createLocalVsRemote(remotePlayer: Player, color?: Color): GameController {
+    public static async createLocalVsRemote(remotePlayer: Player, color?: Color): Promise<GameController> {
         const localColor: Color = color ?? Color.White;
         const remoteColor: Color = localColor === Color.White ? Color.Black : Color.White;
         if (remotePlayer.color !== remoteColor) {
             throw new Error(`Bot color mismatch: expected ${remoteColor}, got ${remotePlayer.color}`);
         }
         const localPlayer: Player = PlayerFactory.createHumanPlayer("You", localColor);
-        return new GameController(localPlayer, remotePlayer);
+        const controller: GameController = new GameController(localPlayer, remotePlayer);
+        await controller.init();
+        return controller;
     }
 
-    public static createLocalVsBotFromFEN(bot: Player, fen: string, color?: Color): GameController {
+    public static async createLocalVsBotFromFEN(bot: Player, fen: string, color?: Color): Promise<GameController> {
         const localColor: Color = color ?? Color.White;
         const botColor: Color = localColor === Color.White ? Color.Black : Color.White;
         if (bot.color !== botColor) {
             throw new Error(`Bot color mismatch: expected ${botColor}, got ${bot.color}`);
         }
         const localPlayer: Player = PlayerFactory.createHumanPlayer("You", localColor);
-        return new GameController(localPlayer, bot, GameFactory.fromFEN(fen));
+        const controller: GameController = new GameController(localPlayer, bot, GameFactory.fromFEN(fen));
+        await controller.init();
+        return controller;
     }
 
-    public static createLocalVsLocalFromFEN(fen: string, color?: Color): GameController {
+    public static async createLocalVsLocalFromFEN(fen: string, color?: Color): Promise<GameController> {
         const player1Color: Color = color ?? Color.White;
         const player2Color: Color = player1Color === Color.White ? Color.Black : Color.White;
         const player1: Player = PlayerFactory.createHumanPlayer("Player 1", player1Color);
         const player2: Player = PlayerFactory.createHumanPlayer("Player 2", player2Color);
-        return new GameController(player1, player2, GameFactory.fromFEN(fen));
+        const controller: GameController = new GameController(player1, player2, GameFactory.fromFEN(fen));
+        await controller.init();
+        return controller;
     }
 
-    public static createLocalVsRemoteFromFEN(remotePlayer: Player, fen: string, color?: Color): GameController {
+    public static async createLocalVsRemoteFromFEN(remotePlayer: Player, fen: string, color?: Color): Promise<GameController> {
         const localColor: Color = color ?? Color.White;
         const remoteColor: Color = localColor === Color.White ? Color.Black : Color.White;
         if (remotePlayer.color !== remoteColor) {
             throw new Error(`Bot color mismatch: expected ${remoteColor}, got ${remotePlayer.color}`);
         }
         const localPlayer: Player = PlayerFactory.createHumanPlayer("You", localColor);
-        return new GameController(localPlayer, remotePlayer, GameFactory.fromFEN(fen));
+        const controller: GameController = new GameController(localPlayer, remotePlayer, GameFactory.fromFEN(fen));
+        await controller.init();
+        return controller;
     }
 
-    public static loadSavedGame(): GameController | null {
+    public static async loadSavedGame(): Promise<GameController | null> {
         const data: string | null = localStorage.getItem("cesariChessSave");
         if (!data) return null;
         try {
             const saveData: SaveGameData = JSON.parse(data);
-            const game: Game = FEN.gameFromFEN(saveData.fen);
+            const game: Game = GameFactory.fromFEN(saveData.fen);
             game.moveHistory = saveData.moveHistory;
+            game.initialFEN = saveData.initialFen;
 
             const undoStack: Game[] = [];
-            let replayGame = GameFactory.fromStartingPosition();
+            let replayGame: Game = GameFactory.fromFEN(saveData.initialFen);
             for (const move of saveData.moveHistory) {
                 undoStack.push(replayGame.clone());
                 replayGame.makeMove(move);
@@ -95,7 +108,7 @@ export class GameControllerFactory {
             const controller: GameController = new GameController(localPlayer, bot, game);
             controller.setUndoStack(undoStack);
             controller.updateControlButtons();
-
+            await controller.init();
             return controller;
         } catch {
             return null;
