@@ -9,7 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import { FILES } from "../chess/constants/board.js";
 import { GameFactory } from "../chess/game/game-factory.js";
-import { MoveValidator } from "../chess/rules/move-validator.js";
 import { Color } from "../chess/types/color.js";
 import { BoardEventManager } from "../ui/board-event-manager.js";
 import { UiRenderer } from "../ui/ui-renderer.js";
@@ -17,8 +16,10 @@ import { ControlEventManager } from "../ui/control-event-manager.js";
 import { HistoryEventManager } from "../ui/history-event-manager.js";
 import { FEN } from "../chess/util/fen.js";
 import { SoundManager } from "../sounds/sound-manager.js";
+import { BoardHighlighter } from "../ui/board-highlighter.js";
 export class GameController {
     constructor(localPlayer, remotePlayer, game) {
+        this._ui = new UiRenderer();
         this._boardEventManager = new BoardEventManager();
         this._controlEventManager = new ControlEventManager();
         this._historyEventManager = new HistoryEventManager();
@@ -34,7 +35,7 @@ export class GameController {
         this._resignConfirmTimeout = null;
         this._localPlayer = localPlayer;
         this._remotePlayer = remotePlayer;
-        this._ui = new UiRenderer();
+        this._boardHighLighter = new BoardHighlighter(this._ui);
         this._game = game !== null && game !== void 0 ? game : GameFactory.fromStartingPosition();
     }
     init() {
@@ -96,7 +97,7 @@ export class GameController {
         this._ui.resetHighlights();
         const piece = this._game.board.getPieceAt(pos);
         if (piece && piece.color === this._game.activeColor) {
-            this.highlightLegalMoves(piece, pos);
+            this._boardHighLighter.highlightLegalMoves(this._game, piece, pos);
             this._ui.selectSquare(`${file}${rank}`);
         }
         else {
@@ -138,7 +139,7 @@ export class GameController {
     selectNewPiece(piece, pos) {
         this._selectedSquare = pos;
         this._ui.resetHighlights();
-        this.highlightLegalMoves(piece, pos);
+        this._boardHighLighter.highlightLegalMoves(this._game, piece, pos);
         const targetFile = FILES[pos.x];
         const targetRank = pos.y + 1;
         this._ui.selectSquare(`${targetFile}${targetRank}`);
@@ -176,7 +177,7 @@ export class GameController {
             this._ui.resetHighlights();
             this._ui.resetSelectHighlights();
             this.renderAppropriateGameState();
-            this.highlightLastMove();
+            this._boardHighLighter.highlightLastMove(this._game);
             this.updateControlButtons();
             this._ui.renderStatus(this._game.status, this._game.activeColor);
             this.resetResignRestartButton();
@@ -215,69 +216,6 @@ export class GameController {
             }
         });
     }
-    highlightLegalMoves(piece, from) {
-        const pseudoLegalMoves = piece.getPseudoLegalMoves();
-        for (const movePos of pseudoLegalMoves) {
-            const move = {
-                from,
-                to: movePos,
-                piece: piece.type,
-                color: piece.color
-            };
-            if (!MoveValidator.validateMove(this._game, move))
-                continue;
-            const targetFile = FILES[movePos.x];
-            const targetRank = movePos.y + 1;
-            const targetPiece = this._game.board.getPieceAt(movePos);
-            if (targetPiece && targetPiece.color !== piece.color) {
-                this._ui.highlightSquare(`${targetFile}${targetRank}`, "targethighlighted");
-            }
-            else {
-                this._ui.highlightSquare(`${targetFile}${targetRank}`);
-            }
-        }
-        this.higlightLegalCastlingMoves(piece, from);
-    }
-    higlightLegalCastlingMoves(piece, from) {
-        if (piece.type === "king") {
-            const castlingTargets = [];
-            if (piece.color === "white" && from.x === 4 && from.y === 0) {
-                castlingTargets.push({ x: 6, y: 0 });
-                castlingTargets.push({ x: 2, y: 0 });
-            }
-            if (piece.color === "black" && from.x === 4 && from.y === 7) {
-                castlingTargets.push({ x: 6, y: 7 });
-                castlingTargets.push({ x: 2, y: 7 });
-            }
-            for (const castlePos of castlingTargets) {
-                const move = {
-                    from,
-                    to: castlePos,
-                    piece: piece.type,
-                    color: piece.color
-                };
-                if (MoveValidator.validateMove(this._game, move)) {
-                    const targetFile = FILES[castlePos.x];
-                    const targetRank = castlePos.y + 1;
-                    this._ui.highlightSquare(`${targetFile}${targetRank}`);
-                }
-            }
-        }
-    }
-    highlightLastMove() {
-        const lastMove = this._game.moveHistory.length > 0
-            ? this._game.moveHistory[this._game.moveHistory.length - 1]
-            : null;
-        if (!lastMove) {
-            this._ui.resetLastMoveHighlights();
-            return;
-        }
-        const fromFile = FILES[lastMove.from.x];
-        const fromRank = lastMove.from.y + 1;
-        const toFile = FILES[lastMove.to.x];
-        const toRank = lastMove.to.y + 1;
-        this._ui.highlightLastMove(`${fromFile}${fromRank}`, `${toFile}${toRank}`);
-    }
     undo() {
         if (this._undoStack.length === 0)
             return;
@@ -290,7 +228,7 @@ export class GameController {
         this._ui.resetHighlights();
         this._ui.resetSelectHighlights();
         this.renderAppropriateGameState();
-        this.highlightLastMove();
+        this._boardHighLighter.highlightLastMove(this._game);
         this.updateControlButtons();
     }
     redo() {
@@ -305,7 +243,7 @@ export class GameController {
         this._ui.resetHighlights();
         this._ui.resetSelectHighlights();
         this.renderAppropriateGameState();
-        this.highlightLastMove();
+        this._boardHighLighter.highlightLastMove(this._game);
         this.updateControlButtons();
     }
     enableBoard() {
@@ -326,7 +264,7 @@ export class GameController {
         this._lastHistoryIndex = this._historyIndex;
         const { gameToRender, activeMoveIndex } = this.getDisplayGameAndMoveIndex();
         this._ui.render(gameToRender, activeMoveIndex);
-        this.highlightHistoryMove(gameToRender, activeMoveIndex);
+        this._boardHighLighter.highlightHistoryMove(gameToRender, activeMoveIndex);
         this._historyEventManager.updateHistoryRoster();
     }
     getDisplayGameAndMoveIndex() {
@@ -353,15 +291,6 @@ export class GameController {
     calculateActiveMoveIndex(historyGame) {
         var _a;
         return historyGame.moveHistory.length - (this._game.moveHistory.length - ((_a = this._historyIndex) !== null && _a !== void 0 ? _a : 0)) - 1;
-    }
-    highlightHistoryMove(game, moveIndex) {
-        if (moveIndex !== null && moveIndex >= 0 && moveIndex < game.moveHistory.length) {
-            const move = game.moveHistory[moveIndex];
-            this._ui.highlightLastMove(FILES[move.from.x] + (move.from.y + 1), FILES[move.to.x] + (move.to.y + 1));
-        }
-        else {
-            this._ui.resetLastMoveHighlights();
-        }
     }
     getGameAtHistoryIndex(historyIndex) {
         return this._undoStack[historyIndex];
