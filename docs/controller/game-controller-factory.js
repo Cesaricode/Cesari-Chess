@@ -124,7 +124,7 @@ export class GameControllerFactory {
                     bot = PlayerFactory.createRandyBot(saveData.botColor);
                 }
                 const controller = new GameController(localPlayer, bot, game);
-                controller.setUndoStack(undoStack);
+                controller.historyManager.setUndoStack(undoStack);
                 controller.updateControlButtons();
                 yield controller.init();
                 return controller;

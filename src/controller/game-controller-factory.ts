@@ -110,7 +110,7 @@ export class GameControllerFactory {
             }
 
             const controller: GameController = new GameController(localPlayer, bot, game);
-            controller.setUndoStack(undoStack);
+            controller.historyManager.setUndoStack(undoStack);
             controller.updateControlButtons();
             await controller.init();
             return controller;
