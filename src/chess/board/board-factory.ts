@@ -18,6 +18,8 @@ export class BoardFactory {
     }
 
     public static fromFEN(fen: string): Board {
+        if (!FEN.isValidFEN(fen)) throw new Error("Error creating board: Invalid FEN string");
+
         const board: Board = new Board();
         FEN.parseBoardFromFEN(board, fen);
         const fenParts = fen.split(" ");

@@ -1,3 +1,4 @@
+import { FEN } from "./chess/util/fen.js";
 function init() {
     document.querySelectorAll(".button").forEach(btn => {
         var _a, _b, _c, _d;
@@ -30,7 +31,8 @@ function showSetupModal(opponent) {
     const colorSelect = document.getElementById("colorSelect");
     const startGameBtn = document.getElementById("startGameBtn");
     const cancelSetupBtn = document.getElementById("cancelSetupBtn");
-    if (!modal || !fenInput || !startTypeSelect || !colorSelect || !startGameBtn || !cancelSetupBtn)
+    const fenError = document.getElementById("fenError");
+    if (!modal || !fenInput || !startTypeSelect || !colorSelect || !startGameBtn || !cancelSetupBtn || !fenError)
         return;
     modal.style.display = "block";
     fenInput.style.display = "none";
@@ -38,6 +40,8 @@ function showSetupModal(opponent) {
     fenInput.value = "";
     startTypeSelect.onchange = function () {
         fenInput.style.display = this.value === "fen" ? "block" : "none";
+        fenError.style.display = "none";
+        fenInput.value = "";
     };
     cancelSetupBtn.onclick = function () {
         modal.style.display = "none";
@@ -46,6 +50,16 @@ function showSetupModal(opponent) {
         let color = colorSelect.value;
         const startType = startTypeSelect.value;
         const fen = fenInput.value.trim();
+        if (startType === "fen" && !FEN.isValidFEN(fen)) {
+            if (fenError) {
+                fenError.textContent = "Invalid FEN string.";
+                fenError.style.display = "block";
+            }
+            return;
+        }
+        else if (fenError) {
+            fenError.style.display = "none";
+        }
         if (color === "random") {
             color = Math.random() < 0.5 ? "white" : "black";
         }
@@ -59,4 +73,3 @@ function showSetupModal(opponent) {
     };
 }
 init();
-export {};

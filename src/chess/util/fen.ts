@@ -14,6 +14,38 @@ export class FEN {
 
     private constructor() { }
 
+    public static isValidFEN(fen: string): boolean {
+        if (!fen || typeof fen !== "string") return false;
+        const parts: string[] = fen.trim().split(/\s+/);
+        if (parts.length !== 6) return false;
+
+        const [board, activeColor, castling, enPassant, halfmove, fullmove]: string[] = parts;
+        const rows: string[] = board.split("/");
+        if (rows.length !== 8) return false;
+
+        for (const row of rows) {
+            let count: number = 0;
+            for (const char of row) {
+                if (/[1-8]/.test(char)) {
+                    count += parseInt(char, 10);
+                } else if ("rnbqkpRNBQKP".includes(char)) {
+                    count += 1;
+                } else {
+                    return false;
+                }
+            }
+            if (count !== 8) return false;
+        }
+
+        if (activeColor !== "w" && activeColor !== "b") return false;
+        if (!/^(-|[KQkq]{1,4})$/.test(castling)) return false;
+        if (enPassant !== "-" && !/^[a-h][36]$/.test(enPassant)) return false;
+        if (isNaN(Number(halfmove)) || isNaN(Number(fullmove))) return false;
+        if (parseInt(halfmove, 10) < 0 || parseInt(fullmove, 10) <= 0) return false;
+
+        return true;
+    }
+
     public static serializeFullFEN(game: Game): string {
         const boardPart: string = FEN.serializeBoardToFEN(game.board);
         const activeColor: string = game.activeColor === Color.White ? "w" : "b";

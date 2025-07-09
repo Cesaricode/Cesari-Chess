@@ -46,6 +46,7 @@ export class GameControllerFactory {
     }
 
     public static async createLocalVsBotFromFEN(bot: Player, fen: string, color?: Color): Promise<GameController> {
+        if (!FEN.isValidFEN(fen)) throw new Error("Error creating gamecontroller: Invalid FEN string");
         const localColor: Color = color ?? Color.White;
         const botColor: Color = localColor === Color.White ? Color.Black : Color.White;
         if (bot.color !== botColor) {
@@ -58,6 +59,7 @@ export class GameControllerFactory {
     }
 
     public static async createLocalVsLocalFromFEN(fen: string, color?: Color): Promise<GameController> {
+        if (!FEN.isValidFEN(fen)) throw new Error("Error creating gamecontroller: Invalid FEN string");
         const player1Color: Color = color ?? Color.White;
         const player2Color: Color = player1Color === Color.White ? Color.Black : Color.White;
         const player1: Player = PlayerFactory.createHumanPlayer("Player 1", player1Color);
@@ -68,6 +70,7 @@ export class GameControllerFactory {
     }
 
     public static async createLocalVsRemoteFromFEN(remotePlayer: Player, fen: string, color?: Color): Promise<GameController> {
+        if (!FEN.isValidFEN(fen)) throw new Error("Error creating gamecontroller: Invalid FEN string");
         const localColor: Color = color ?? Color.White;
         const remoteColor: Color = localColor === Color.White ? Color.Black : Color.White;
         if (remotePlayer.color !== remoteColor) {
@@ -84,6 +87,7 @@ export class GameControllerFactory {
         if (!data) return null;
         try {
             const saveData: SaveGameData = JSON.parse(data);
+            if (!FEN.isValidFEN(saveData.fen)) throw new Error("Error creating gamecontroller from gamesave: Invalid FEN string");
             const game: Game = GameFactory.fromFEN(saveData.fen);
             game.moveHistory = saveData.moveHistory;
             game.initialFEN = saveData.initialFen;

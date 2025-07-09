@@ -490,7 +490,6 @@ export class GameController {
             clearTimeout(this._resignConfirmTimeout);
             this._resignConfirmTimeout = null;
         }
-        console.log("hello");
     }
     resignGame() {
         if (this._game.activeColor === Color.White) {

@@ -12,6 +12,8 @@ export class BoardFactory {
         return board;
     }
     static fromFEN(fen) {
+        if (!FEN.isValidFEN(fen))
+            throw new Error("Error creating board: Invalid FEN string");
         const board = new Board();
         FEN.parseBoardFromFEN(board, fen);
         const fenParts = fen.split(" ");

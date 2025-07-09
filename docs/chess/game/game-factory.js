@@ -9,6 +9,8 @@ export class GameFactory {
         return game;
     }
     static fromFEN(fen) {
+        if (!FEN.isValidFEN(fen))
+            throw new Error("Error creating game: Invalid FEN string");
         const board = BoardFactory.fromFEN(fen);
         const game = new Game(board, undefined, fen);
         FEN.parseGameStateFromFEN(game, fen);

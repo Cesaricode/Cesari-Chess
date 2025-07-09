@@ -6,6 +6,44 @@ import { Board } from "../board/board.js";
 import { Game } from "../game/game.js";
 export class FEN {
     constructor() { }
+    static isValidFEN(fen) {
+        if (!fen || typeof fen !== "string")
+            return false;
+        const parts = fen.trim().split(/\s+/);
+        if (parts.length !== 6)
+            return false;
+        const [board, activeColor, castling, enPassant, halfmove, fullmove] = parts;
+        const rows = board.split("/");
+        if (rows.length !== 8)
+            return false;
+        for (const row of rows) {
+            let count = 0;
+            for (const char of row) {
+                if (/[1-8]/.test(char)) {
+                    count += parseInt(char, 10);
+                }
+                else if ("rnbqkpRNBQKP".includes(char)) {
+                    count += 1;
+                }
+                else {
+                    return false;
+                }
+            }
+            if (count !== 8)
+                return false;
+        }
+        if (activeColor !== "w" && activeColor !== "b")
+            return false;
+        if (!/^(-|[KQkq]{1,4})$/.test(castling))
+            return false;
+        if (enPassant !== "-" && !/^[a-h][36]$/.test(enPassant))
+            return false;
+        if (isNaN(Number(halfmove)) || isNaN(Number(fullmove)))
+            return false;
+        if (parseInt(halfmove, 10) < 0 || parseInt(fullmove, 10) <= 0)
+            return false;
+        return true;
+    }
     static serializeFullFEN(game) {
         var _a, _b;
         const boardPart = FEN.serializeBoardToFEN(game.board);

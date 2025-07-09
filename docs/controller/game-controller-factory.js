@@ -11,6 +11,7 @@ import { GameController } from "./game-controller.js";
 import { GameFactory } from "../chess/game/game-factory.js";
 import { Color } from "../chess/types/color.js";
 import { PlayerFactory } from "../player/player-factory.js";
+import { FEN } from "../chess/util/fen.js";
 export class GameControllerFactory {
     constructor() { }
     static createLocalVsBot(bot, color) {
@@ -52,6 +53,8 @@ export class GameControllerFactory {
     }
     static createLocalVsBotFromFEN(bot, fen, color) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!FEN.isValidFEN(fen))
+                throw new Error("Error creating gamecontroller: Invalid FEN string");
             const localColor = color !== null && color !== void 0 ? color : Color.White;
             const botColor = localColor === Color.White ? Color.Black : Color.White;
             if (bot.color !== botColor) {
@@ -65,6 +68,8 @@ export class GameControllerFactory {
     }
     static createLocalVsLocalFromFEN(fen, color) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!FEN.isValidFEN(fen))
+                throw new Error("Error creating gamecontroller: Invalid FEN string");
             const player1Color = color !== null && color !== void 0 ? color : Color.White;
             const player2Color = player1Color === Color.White ? Color.Black : Color.White;
             const player1 = PlayerFactory.createHumanPlayer("Player 1", player1Color);
@@ -76,6 +81,8 @@ export class GameControllerFactory {
     }
     static createLocalVsRemoteFromFEN(remotePlayer, fen, color) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!FEN.isValidFEN(fen))
+                throw new Error("Error creating gamecontroller: Invalid FEN string");
             const localColor = color !== null && color !== void 0 ? color : Color.White;
             const remoteColor = localColor === Color.White ? Color.Black : Color.White;
             if (remotePlayer.color !== remoteColor) {
@@ -94,6 +101,8 @@ export class GameControllerFactory {
                 return null;
             try {
                 const saveData = JSON.parse(data);
+                if (!FEN.isValidFEN(saveData.fen))
+                    throw new Error("Error creating gamecontroller from gamesave: Invalid FEN string");
                 const game = GameFactory.fromFEN(saveData.fen);
                 game.moveHistory = saveData.moveHistory;
                 game.initialFEN = saveData.initialFen;
