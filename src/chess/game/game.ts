@@ -390,6 +390,10 @@ export class Game implements GameState {
         return simulated.isKingInCheck(opponent) && !simulated.hasLegalMoves(opponent);
     }
 
+    public resign(color: Color): void {
+        this._status = color === Color.White ? GameStatus.WhiteResigns : GameStatus.BlackResigns;
+    }
+
     public get board(): Board { return this._board; }
 
     public get clock(): ChessClock { return this._clock; }

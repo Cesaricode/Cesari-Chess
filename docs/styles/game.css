@@ -547,3 +547,15 @@ select#promote:focus {
     color: inherit;
     font-weight: bold;
 }
+
+.button-confirm {
+    background: #d32f2f !important;
+    color: #fff !important;
+    border-color: #b71c1c !important;
+}
+
+.button-restart {
+    background: #388e3c !important;
+    color: #fff !important;
+    border-color: #1b5e20 !important;
+}

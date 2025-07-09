@@ -15,6 +15,7 @@ import { ControlEventManager } from "../ui/control-event-manager.js";
 import { HistoryEventManager } from "../ui/history-event-manager.js";
 import { FEN } from "../chess/util/fen.js";
 import { SaveGameData } from "../types/save-game-data.js";
+import { SoundManager } from "../sounds/sound-manager.js";
 
 export class GameController {
 
@@ -23,6 +24,7 @@ export class GameController {
     private _boardEventManager: BoardEventManager = new BoardEventManager();
     private _controlEventManager: ControlEventManager = new ControlEventManager();
     private _historyEventManager: HistoryEventManager = new HistoryEventManager();
+    private _soundManager: SoundManager = new SoundManager();
 
     private _localPlayer: Player;
     private _remotePlayer: Player;
@@ -37,6 +39,8 @@ export class GameController {
     private _isBoardEnabled: boolean = true;
     private _isBoardFlipped: boolean = false;
 
+    private _resignRestartState: "resign" | "confirm" | "restart" = "resign";
+    private _resignConfirmTimeout: number | null = null;
 
     public constructor(localPlayer: Player, remotePlayer: Player, game?: Game) {
         this._localPlayer = localPlayer;
@@ -51,6 +55,7 @@ export class GameController {
         const blackPlayer: Player = this._localPlayer.color === Color.Black ? this._localPlayer : this._remotePlayer;
         this._ui.renderPlayerNames(whitePlayer.name, blackPlayer.name);
         this.setupEventListeners();
+        this.setupResignRestartButton();
         if (this._localPlayer.color === Color.Black) {
             this.setBoardFlipped(true);
         }
@@ -91,6 +96,10 @@ export class GameController {
 
         if (this._game.status !== "ongoing") {
             this._boardEventManager.removeBoardEventListeners();
+        }
+
+        if (!this._soundManager.userHasInteracted) {
+            this._soundManager.userHasInteracted = true;
         }
     }
 
@@ -176,34 +185,37 @@ export class GameController {
     }
 
     private async attemptMove(move: Move): Promise<void> {
-        const targetPiece = this._game.board.getPieceAt(move.to);
+        const targetPiece: Piece | null = this._game.board.getPieceAt(move.to);
         const gameClone: Game = this._game.clone();
         if (this._game.makeMove(move)) {
             this._undoStack.push(gameClone);
-            this._redoStack = [];
-            this._selectedSquare = null;
-            this._ui.resetHighlights();
-            this._ui.resetSelectHighlights();
-            this.renderAppropriateGameState();
-            this.highlightLastMove();
-            this.updateControlButtons();
-            this._ui.renderStatus(this._game.status, this._game.activeColor);
-
-            if (this._game.status !== "ongoing") {
-                const endGameSound: HTMLAudioElement = new Audio("sounds/genericnotify.mp3");
-                endGameSound.play();
-            } else if (targetPiece && targetPiece.color !== move.color) {
-                const captureSound: HTMLAudioElement = new Audio("sounds/capture.mp3");
-                captureSound.play();
-            } else {
-                const moveSound: HTMLAudioElement = new Audio("sounds/move.mp3");
-                moveSound.play();
-            }
-
-            this.updateSaveGameState();
-            await this.tryBotMove();
-
+            this.handleSuccesfulMove(move, targetPiece);
         }
+    }
+
+    private async handleSuccesfulMove(move: Move, targetPiece: Piece | null): Promise<void> {
+        this._redoStack = [];
+        this._selectedSquare = null;
+        this._ui.resetHighlights();
+        this._ui.resetSelectHighlights();
+        this.renderAppropriateGameState();
+        this.highlightLastMove();
+        this.updateControlButtons();
+        this._ui.renderStatus(this._game.status, this._game.activeColor);
+        this.resetResignRestartButton();
+
+        if (this._game.status !== "ongoing") {
+            this._soundManager.playGenericNotifySound();
+            this.setResignRestartToRestart();
+        } else if (targetPiece && targetPiece.color !== move.color) {
+            this._soundManager.playCaptureSound();
+        } else {
+            this._soundManager.playMoveSound();
+        }
+
+
+        this.updateSaveGameState();
+        await this.tryBotMove();
     }
 
     private updateSaveGameState() {
@@ -462,5 +474,80 @@ export class GameController {
 
     public setUndoStack(stack: Game[]): void {
         this._undoStack = stack;
+    }
+
+    private setupResignRestartButton(): void {
+        const btn: HTMLButtonElement | null = document.getElementById("resignRestartBtn") as HTMLButtonElement | null;
+        if (!btn) return;
+
+        btn.onclick = () => {
+            btn.classList.remove("button-confirm", "button-restart");
+            if (this._resignRestartState === "resign") {
+                btn.querySelector(".btn-label")!.textContent = "Confirm Resign";
+                btn.classList.add("button-confirm");
+                this._resignRestartState = "confirm";
+
+                if (this._resignConfirmTimeout !== null) {
+                    clearTimeout(this._resignConfirmTimeout);
+                }
+                this._resignConfirmTimeout = window.setTimeout(() => {
+                    this.resetResignRestartButton();
+                    this._resignConfirmTimeout = null;
+                }, 5000);
+
+            } else if (this._resignRestartState === "confirm") {
+                if (this._resignConfirmTimeout !== null) {
+                    clearTimeout(this._resignConfirmTimeout);
+                    this._resignConfirmTimeout = null;
+                }
+                this.resignGame();
+                btn.querySelector(".btn-label")!.textContent = "Restart Game";
+                btn.classList.add("button-restart");
+                this._resignRestartState = "restart";
+            } else if (this._resignRestartState === "restart") {
+                window.location.reload();
+            }
+        };
+    }
+
+    private resetResignRestartButton(): void {
+        const btn: HTMLButtonElement | null = document.getElementById("resignRestartBtn") as HTMLButtonElement | null;
+        if (!btn) return;
+        this._resignRestartState = "resign";
+        btn.querySelector(".btn-label")!.textContent = "Resign";
+        btn.classList.remove("button-confirm", "button-restart");
+        if (this._resignConfirmTimeout !== null) {
+            clearTimeout(this._resignConfirmTimeout);
+            this._resignConfirmTimeout = null;
+        }
+    }
+
+    private setResignRestartToRestart(): void {
+        const btn: HTMLButtonElement | null = document.getElementById("resignRestartBtn") as HTMLButtonElement | null;
+        if (!btn) return;
+        this._resignRestartState = "restart";
+        btn.querySelector(".btn-label")!.textContent = "Restart Game";
+        btn.classList.remove("button-confirm");
+        btn.classList.add("button-restart");
+        if (this._resignConfirmTimeout !== null) {
+            clearTimeout(this._resignConfirmTimeout);
+            this._resignConfirmTimeout = null;
+        }
+        console.log("hello");
+    }
+
+    private resignGame(): void {
+        if (this._game.activeColor === Color.White) {
+            this._game.resign(Color.White);
+        } else {
+            this._game.resign(Color.Black);
+        }
+        this._isBoardEnabled = false;
+        this.updateSaveGameState();
+        this.updateControlButtons();
+        this.renderAppropriateGameState();
+        this._ui.renderStatus(this._game.status, this._game.activeColor);
+
+        this._soundManager.playGenericNotifySound();
     }
 }

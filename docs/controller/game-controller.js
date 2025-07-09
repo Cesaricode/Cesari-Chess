@@ -16,11 +16,13 @@ import { UiRenderer } from "../ui/ui-renderer.js";
 import { ControlEventManager } from "../ui/control-event-manager.js";
 import { HistoryEventManager } from "../ui/history-event-manager.js";
 import { FEN } from "../chess/util/fen.js";
+import { SoundManager } from "../sounds/sound-manager.js";
 export class GameController {
     constructor(localPlayer, remotePlayer, game) {
         this._boardEventManager = new BoardEventManager();
         this._controlEventManager = new ControlEventManager();
         this._historyEventManager = new HistoryEventManager();
+        this._soundManager = new SoundManager();
         this._undoStack = [];
         this._redoStack = [];
         this._historyIndex = null;
@@ -28,6 +30,8 @@ export class GameController {
         this._selectedSquare = null;
         this._isBoardEnabled = true;
         this._isBoardFlipped = false;
+        this._resignRestartState = "resign";
+        this._resignConfirmTimeout = null;
         this._localPlayer = localPlayer;
         this._remotePlayer = remotePlayer;
         this._ui = new UiRenderer();
@@ -40,6 +44,7 @@ export class GameController {
             const blackPlayer = this._localPlayer.color === Color.Black ? this._localPlayer : this._remotePlayer;
             this._ui.renderPlayerNames(whitePlayer.name, blackPlayer.name);
             this.setupEventListeners();
+            this.setupResignRestartButton();
             if (this._localPlayer.color === Color.Black) {
                 this.setBoardFlipped(true);
             }
@@ -80,6 +85,9 @@ export class GameController {
             this.resetHistoryView();
             if (this._game.status !== "ongoing") {
                 this._boardEventManager.removeBoardEventListeners();
+            }
+            if (!this._soundManager.userHasInteracted) {
+                this._soundManager.userHasInteracted = true;
             }
         });
     }
@@ -157,29 +165,33 @@ export class GameController {
             const gameClone = this._game.clone();
             if (this._game.makeMove(move)) {
                 this._undoStack.push(gameClone);
-                this._redoStack = [];
-                this._selectedSquare = null;
-                this._ui.resetHighlights();
-                this._ui.resetSelectHighlights();
-                this.renderAppropriateGameState();
-                this.highlightLastMove();
-                this.updateControlButtons();
-                this._ui.renderStatus(this._game.status, this._game.activeColor);
-                if (this._game.status !== "ongoing") {
-                    const endGameSound = new Audio("sounds/genericnotify.mp3");
-                    endGameSound.play();
-                }
-                else if (targetPiece && targetPiece.color !== move.color) {
-                    const captureSound = new Audio("sounds/capture.mp3");
-                    captureSound.play();
-                }
-                else {
-                    const moveSound = new Audio("sounds/move.mp3");
-                    moveSound.play();
-                }
-                this.updateSaveGameState();
-                yield this.tryBotMove();
+                this.handleSuccesfulMove(move, targetPiece);
             }
+        });
+    }
+    handleSuccesfulMove(move, targetPiece) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this._redoStack = [];
+            this._selectedSquare = null;
+            this._ui.resetHighlights();
+            this._ui.resetSelectHighlights();
+            this.renderAppropriateGameState();
+            this.highlightLastMove();
+            this.updateControlButtons();
+            this._ui.renderStatus(this._game.status, this._game.activeColor);
+            this.resetResignRestartButton();
+            if (this._game.status !== "ongoing") {
+                this._soundManager.playGenericNotifySound();
+                this.setResignRestartToRestart();
+            }
+            else if (targetPiece && targetPiece.color !== move.color) {
+                this._soundManager.playCaptureSound();
+            }
+            else {
+                this._soundManager.playMoveSound();
+            }
+            this.updateSaveGameState();
+            yield this.tryBotMove();
         });
     }
     updateSaveGameState() {
@@ -420,5 +432,78 @@ export class GameController {
     }
     setUndoStack(stack) {
         this._undoStack = stack;
+    }
+    setupResignRestartButton() {
+        const btn = document.getElementById("resignRestartBtn");
+        if (!btn)
+            return;
+        btn.onclick = () => {
+            btn.classList.remove("button-confirm", "button-restart");
+            if (this._resignRestartState === "resign") {
+                btn.querySelector(".btn-label").textContent = "Confirm Resign";
+                btn.classList.add("button-confirm");
+                this._resignRestartState = "confirm";
+                if (this._resignConfirmTimeout !== null) {
+                    clearTimeout(this._resignConfirmTimeout);
+                }
+                this._resignConfirmTimeout = window.setTimeout(() => {
+                    this.resetResignRestartButton();
+                    this._resignConfirmTimeout = null;
+                }, 5000);
+            }
+            else if (this._resignRestartState === "confirm") {
+                if (this._resignConfirmTimeout !== null) {
+                    clearTimeout(this._resignConfirmTimeout);
+                    this._resignConfirmTimeout = null;
+                }
+                this.resignGame();
+                btn.querySelector(".btn-label").textContent = "Restart Game";
+                btn.classList.add("button-restart");
+                this._resignRestartState = "restart";
+            }
+            else if (this._resignRestartState === "restart") {
+                window.location.reload();
+            }
+        };
+    }
+    resetResignRestartButton() {
+        const btn = document.getElementById("resignRestartBtn");
+        if (!btn)
+            return;
+        this._resignRestartState = "resign";
+        btn.querySelector(".btn-label").textContent = "Resign";
+        btn.classList.remove("button-confirm", "button-restart");
+        if (this._resignConfirmTimeout !== null) {
+            clearTimeout(this._resignConfirmTimeout);
+            this._resignConfirmTimeout = null;
+        }
+    }
+    setResignRestartToRestart() {
+        const btn = document.getElementById("resignRestartBtn");
+        if (!btn)
+            return;
+        this._resignRestartState = "restart";
+        btn.querySelector(".btn-label").textContent = "Restart Game";
+        btn.classList.remove("button-confirm");
+        btn.classList.add("button-restart");
+        if (this._resignConfirmTimeout !== null) {
+            clearTimeout(this._resignConfirmTimeout);
+            this._resignConfirmTimeout = null;
+        }
+        console.log("hello");
+    }
+    resignGame() {
+        if (this._game.activeColor === Color.White) {
+            this._game.resign(Color.White);
+        }
+        else {
+            this._game.resign(Color.Black);
+        }
+        this._isBoardEnabled = false;
+        this.updateSaveGameState();
+        this.updateControlButtons();
+        this.renderAppropriateGameState();
+        this._ui.renderStatus(this._game.status, this._game.activeColor);
+        this._soundManager.playGenericNotifySound();
     }
 }

@@ -346,6 +346,9 @@ export class Game {
         const opponent = move.color === Color.White ? Color.Black : Color.White;
         return simulated.isKingInCheck(opponent) && !simulated.hasLegalMoves(opponent);
     }
+    resign(color) {
+        this._status = color === Color.White ? GameStatus.WhiteResigns : GameStatus.BlackResigns;
+    }
     get board() { return this._board; }
     get clock() { return this._clock; }
     get status() { return this._status; }
