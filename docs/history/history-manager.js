@@ -5,6 +5,7 @@ export class HistoryManager {
         this._historyIndex = historyIndex !== null && historyIndex !== void 0 ? historyIndex : null;
         this._lastHistoryIndex = lastHistoryIndex !== null && lastHistoryIndex !== void 0 ? lastHistoryIndex : null;
     }
+    // Getters/Setters
     get undoStack() {
         return this._undoStack;
     }
@@ -26,6 +27,7 @@ export class HistoryManager {
     set lastHistoryIndex(index) {
         this._lastHistoryIndex = index;
     }
+    // Public Methods
     pushUndo(game) {
         this._undoStack.push(game);
     }
@@ -84,17 +86,6 @@ export class HistoryManager {
             return { gameToRender: historyGame, activeMoveIndex };
         }
     }
-    addMissingMovesToHistoryGame(currentGame, historyGame) {
-        const start = historyGame.moveHistory.length;
-        const missingMoves = currentGame.moveHistory.slice(start);
-        for (const move of missingMoves) {
-            historyGame.addToMoveHistory(move);
-        }
-    }
-    calculateActiveMoveIndex(currentGame, historyGame) {
-        var _a;
-        return historyGame.moveHistory.length - (currentGame.moveHistory.length - ((_a = this._historyIndex) !== null && _a !== void 0 ? _a : 0)) - 1;
-    }
     goBackInHistory() {
         if (this._undoStack.length === 0 || this._historyIndex !== null && this._historyIndex <= 0)
             return;
@@ -127,5 +118,17 @@ export class HistoryManager {
         else {
             this._historyIndex = index;
         }
+    }
+    // Helpers
+    addMissingMovesToHistoryGame(currentGame, historyGame) {
+        const start = historyGame.moveHistory.length;
+        const missingMoves = currentGame.moveHistory.slice(start);
+        for (const move of missingMoves) {
+            historyGame.addToMoveHistory(move);
+        }
+    }
+    calculateActiveMoveIndex(currentGame, historyGame) {
+        var _a;
+        return historyGame.moveHistory.length - (currentGame.moveHistory.length - ((_a = this._historyIndex) !== null && _a !== void 0 ? _a : 0)) - 1;
     }
 }

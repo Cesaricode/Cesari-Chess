@@ -6,6 +6,7 @@ type HistoryControlHandler = {
 };
 
 export class HistoryEventManager {
+
     private _goBackBtn: HTMLButtonElement | null;
     private _goForwardBtn: HTMLButtonElement | null;
     private _resetBtn: HTMLButtonElement | null;
@@ -24,12 +25,6 @@ export class HistoryEventManager {
         this.setupHistoryRoster(historyColumnid);
     }
 
-    private setupHistoryRoster(historyColumnid: string) {
-        const roster: HTMLCollectionOf<HTMLElement> | null = document.getElementsByClassName(historyColumnid) as HTMLCollectionOf<HTMLElement> | null;
-        if (roster) this._historyRoster = Array.from(roster);
-        else this._historyRoster = null;
-    }
-
     public setupHistoryEventListeners(handlers: HistoryControlHandler): void {
         this._handlers = handlers;
         if (this._goBackBtn) {
@@ -45,6 +40,12 @@ export class HistoryEventManager {
     public updateHistoryRoster(): void {
         this.setupHistoryRoster("move-history-index");
         this.applyHistoryEventListeners();
+    }
+
+    private setupHistoryRoster(historyColumnid: string) {
+        const roster: HTMLCollectionOf<HTMLElement> | null = document.getElementsByClassName(historyColumnid) as HTMLCollectionOf<HTMLElement> | null;
+        if (roster) this._historyRoster = Array.from(roster);
+        else this._historyRoster = null;
     }
 
     private applyHistoryEventListeners(): void {

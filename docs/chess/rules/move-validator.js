@@ -9,6 +9,32 @@ export class MoveValidator {
         }
         return (validator(game, move) && !MoveValidator.leavesKingInCheck(game, move));
     }
+    static isSquareAttacked(game, pos, byColor) {
+        for (const piece of game.board.getPiecesByColor(byColor)) {
+            if (!piece.isActive())
+                continue;
+            const move = {
+                from: piece.position,
+                to: pos,
+                piece: piece.type,
+                color: byColor
+            };
+            if (piece.type === PieceType.King) {
+                const dx = Math.abs(piece.position.x - pos.x);
+                const dy = Math.abs(piece.position.y - pos.y);
+                if ((dx <= 1 && dy <= 1) && (dx + dy > 0)) {
+                    return true;
+                }
+            }
+            else {
+                const validator = MoveValidator.validators[piece.type];
+                if (validator && validator(game, move)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     static validatePawnMove(game, move) {
         const pawn = game.board.getPieceAt(move.from);
         if (!MoveValidator.assertValidPiece(pawn, PieceType.Pawn, move.color)) {
@@ -223,32 +249,6 @@ export class MoveValidator {
             }
         }
         return true;
-    }
-    static isSquareAttacked(game, pos, byColor) {
-        for (const piece of game.board.getPiecesByColor(byColor)) {
-            if (!piece.isActive())
-                continue;
-            const move = {
-                from: piece.position,
-                to: pos,
-                piece: piece.type,
-                color: byColor
-            };
-            if (piece.type === PieceType.King) {
-                const dx = Math.abs(piece.position.x - pos.x);
-                const dy = Math.abs(piece.position.y - pos.y);
-                if ((dx <= 1 && dy <= 1) && (dx + dy > 0)) {
-                    return true;
-                }
-            }
-            else {
-                const validator = MoveValidator.validators[piece.type];
-                if (validator && validator(game, move)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }
 MoveValidator.validators = {

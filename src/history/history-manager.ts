@@ -2,6 +2,7 @@ import { Game } from "../chess/game/game.js";
 import { Move } from "../chess/types/move.js";
 
 export class HistoryManager {
+
     private _undoStack: Game[];
     private _redoStack: Game[];
     private _historyIndex: number | null;
@@ -18,6 +19,10 @@ export class HistoryManager {
         this._historyIndex = historyIndex ?? null;
         this._lastHistoryIndex = lastHistoryIndex ?? null;
     }
+
+
+    // Getters/Setters
+
 
     public get undoStack(): Game[] {
         return this._undoStack;
@@ -46,6 +51,10 @@ export class HistoryManager {
     public set lastHistoryIndex(index: number | null) {
         this._lastHistoryIndex = index;
     }
+
+
+    // Public Methods
+
 
     public pushUndo(game: Game): void {
         this._undoStack.push(game);
@@ -110,18 +119,6 @@ export class HistoryManager {
         }
     }
 
-    private addMissingMovesToHistoryGame(currentGame: Game, historyGame: Game): void {
-        const start: number = historyGame.moveHistory.length;
-        const missingMoves: Move[] = currentGame.moveHistory.slice(start);
-        for (const move of missingMoves) {
-            historyGame.addToMoveHistory(move);
-        }
-    }
-
-    private calculateActiveMoveIndex(currentGame: Game, historyGame: Game): number {
-        return historyGame.moveHistory.length - (currentGame.moveHistory.length - (this._historyIndex ?? 0)) - 1;
-    }
-
     public goBackInHistory(): void {
         if (this._undoStack.length === 0 || this._historyIndex !== null && this._historyIndex <= 0) return;
 
@@ -152,5 +149,21 @@ export class HistoryManager {
         } else {
             this._historyIndex = index;
         }
+    }
+
+
+    // Helpers
+
+
+    private addMissingMovesToHistoryGame(currentGame: Game, historyGame: Game): void {
+        const start: number = historyGame.moveHistory.length;
+        const missingMoves: Move[] = currentGame.moveHistory.slice(start);
+        for (const move of missingMoves) {
+            historyGame.addToMoveHistory(move);
+        }
+    }
+
+    private calculateActiveMoveIndex(currentGame: Game, historyGame: Game): number {
+        return historyGame.moveHistory.length - (currentGame.moveHistory.length - (this._historyIndex ?? 0)) - 1;
     }
 }

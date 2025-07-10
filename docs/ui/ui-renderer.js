@@ -7,52 +7,28 @@ export class UiRenderer {
         const statusEl = document.getElementById(statusElementId);
         if (!statusEl)
             throw new Error("UI status element not found");
-        this.statusElement = statusEl;
+        this._statusElement = statusEl;
         const board = document.getElementById("chessBoard");
         if (board) {
             board.addEventListener("contextmenu", (e) => e.preventDefault());
         }
     }
+    // Public Methods
     render(game, activeMoveIndex) {
         this.clearBoard();
         this.renderPieces(game);
         this.highlightCheckSquare(game);
         this.renderMoveHistory(game.moveHistory, game, activeMoveIndex);
     }
-    clearBoard() {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                const square = document.getElementById(`${file}${rank}`);
-                if (square)
-                    square.innerHTML = "";
-            }
+    renderPlayerNames(whiteName, blackName) {
+        const whiteNameEl = document.getElementById('playerWhiteName');
+        const blackNameEl = document.getElementById('playerBlackName');
+        if (whiteNameEl) {
+            whiteNameEl.textContent = `White: ${whiteName}`;
         }
-    }
-    renderPieces(game) {
-        for (const piece of game.board.getAllPieces()) {
-            if (!piece.isActive())
-                continue;
-            const { x, y } = piece.position;
-            const file = FILES[x];
-            const rank = y + 1;
-            const square = document.getElementById(`${file}${rank}`);
-            if (square) {
-                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="false" />`;
-            }
+        if (blackNameEl) {
+            blackNameEl.textContent = `Black: ${blackName}`;
         }
-    }
-    getPieceIconPath(piece) {
-        const colorPrefix = piece.color === "white" ? "w" : "b";
-        const typeMap = {
-            king: "K",
-            queen: "Q",
-            rook: "R",
-            bishop: "B",
-            knight: "N",
-            pawn: "P"
-        };
-        const typeLetter = typeMap[piece.type];
-        return `/icons/${colorPrefix}${typeLetter}.svg`;
     }
     renderStatus(status, activeColor) {
         var _a;
@@ -70,7 +46,67 @@ export class UiRenderer {
             [GameStatus.ThreefoldRepetition]: "Draw by threefold repetition.",
             [GameStatus.FiftyMoveRule]: "Draw by fifty-move rule."
         };
-        this.statusElement.textContent = (_a = statusMessages[status]) !== null && _a !== void 0 ? _a : "Game ended.";
+        this._statusElement.textContent = (_a = statusMessages[status]) !== null && _a !== void 0 ? _a : "Game ended.";
+    }
+    highlightSquare(squareId, type = "highlighted") {
+        const square = document.getElementById(squareId);
+        if (square)
+            square.classList.add(type);
+    }
+    highlightLastMove(from, to) {
+        this.resetLastMoveHighlights();
+        const fromSquare = document.getElementById(from);
+        const toSquare = document.getElementById(to);
+        if (fromSquare && toSquare) {
+            fromSquare.classList.add("lastmove");
+            toSquare.classList.add("lastmove");
+        }
+    }
+    selectSquare(squareId) {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                const sq = document.getElementById(`${file}${rank}`);
+                if (sq)
+                    sq.classList.remove("selected");
+            }
+        }
+        const square = document.getElementById(squareId);
+        if (square)
+            square.classList.add("selected");
+    }
+    highlightCheckSquare(game) {
+        this.resetCheckHighlights();
+        const king = game.board.getPiecesByColor(game.activeColor).find(p => p.type === "king" && p.isActive());
+        if (!king)
+            return;
+        if (game.isKingInCheck(king.color)) {
+            const file = FILES[king.position.x];
+            const rank = king.position.y + 1;
+            const square = document.getElementById(`${file}${rank}`);
+            if (square)
+                square.classList.add("checkhighlighted");
+        }
+    }
+    resetHighlights() {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeHighlight(`${file}${rank}`);
+            }
+        }
+    }
+    resetLastMoveHighlights() {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeLastMoveHighlight(`${file}${rank}`);
+            }
+        }
+    }
+    resetSelectHighlights() {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeSelectHighlight(`${file}${rank}`);
+            }
+        }
     }
     renderMoveHistory(moveHistory, game, activeMoveIndex) {
         const grid = document.getElementById("moveHistoryGrid");
@@ -153,6 +189,29 @@ export class UiRenderer {
         }
         this.scrollSelectedMoveIntoView();
     }
+    // Helpers
+    clearBoard() {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                const square = document.getElementById(`${file}${rank}`);
+                if (square)
+                    square.innerHTML = "";
+            }
+        }
+    }
+    renderPieces(game) {
+        for (const piece of game.board.getAllPieces()) {
+            if (!piece.isActive())
+                continue;
+            const { x, y } = piece.position;
+            const file = FILES[x];
+            const rank = y + 1;
+            const square = document.getElementById(`${file}${rank}`);
+            if (square) {
+                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="false" />`;
+            }
+        }
+    }
     createEmptyMoveHistoryCell(className) {
         const cell = document.createElement("span");
         cell.className = className;
@@ -195,52 +254,6 @@ export class UiRenderer {
             }
         }, 0);
     }
-    highlightSquare(squareId, type = "highlighted") {
-        const square = document.getElementById(squareId);
-        if (square)
-            square.classList.add(type);
-    }
-    highlightLastMove(from, to) {
-        this.resetLastMoveHighlights();
-        const fromSquare = document.getElementById(from);
-        const toSquare = document.getElementById(to);
-        if (fromSquare && toSquare) {
-            fromSquare.classList.add("lastmove");
-            toSquare.classList.add("lastmove");
-        }
-    }
-    selectSquare(squareId) {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                const sq = document.getElementById(`${file}${rank}`);
-                if (sq)
-                    sq.classList.remove("selected");
-            }
-        }
-        const square = document.getElementById(squareId);
-        if (square)
-            square.classList.add("selected");
-    }
-    highlightCheckSquare(game) {
-        this.resetCheckHighlights();
-        const king = game.board.getPiecesByColor(game.activeColor).find(p => p.type === "king" && p.isActive());
-        if (!king)
-            return;
-        if (game.isKingInCheck(king.color)) {
-            const file = FILES[king.position.x];
-            const rank = king.position.y + 1;
-            const square = document.getElementById(`${file}${rank}`);
-            if (square)
-                square.classList.add("checkhighlighted");
-        }
-    }
-    resetSelectHighlights() {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                this.removeSelectHighlight(`${file}${rank}`);
-            }
-        }
-    }
     removeSelectHighlight(squareId) {
         const square = document.getElementById(squareId);
         if (square) {
@@ -252,13 +265,6 @@ export class UiRenderer {
         if (square) {
             square.classList.remove("highlighted");
             square.classList.remove("targethighlighted");
-        }
-    }
-    resetHighlights() {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                this.removeHighlight(`${file}${rank}`);
-            }
         }
     }
     resetCheckHighlights() {
@@ -274,27 +280,23 @@ export class UiRenderer {
             square.classList.remove("checkhighlighted");
         }
     }
-    resetLastMoveHighlights() {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                this.removeLastMoveHighlight(`${file}${rank}`);
-            }
-        }
-    }
     removeLastMoveHighlight(squareId) {
         const square = document.getElementById(squareId);
         if (square) {
             square.classList.remove("lastmove");
         }
     }
-    renderPlayerNames(whiteName, blackName) {
-        const whiteNameEl = document.getElementById('playerWhiteName');
-        const blackNameEl = document.getElementById('playerBlackName');
-        if (whiteNameEl) {
-            whiteNameEl.textContent = `White: ${whiteName}`;
-        }
-        if (blackNameEl) {
-            blackNameEl.textContent = `Black: ${blackName}`;
-        }
+    getPieceIconPath(piece) {
+        const colorPrefix = piece.color === "white" ? "w" : "b";
+        const typeMap = {
+            king: "K",
+            queen: "Q",
+            rook: "R",
+            bishop: "B",
+            knight: "N",
+            pawn: "P"
+        };
+        const typeLetter = typeMap[piece.type];
+        return `/icons/${colorPrefix}${typeLetter}.svg`;
     }
 }

@@ -6,6 +6,7 @@ type ControlHandler = {
 };
 
 export class ControlEventManager {
+
     private undoBtn: HTMLButtonElement | null;
     private redoBtn: HTMLButtonElement | null;
     private homeBtn: HTMLButtonElement | null;

@@ -36,13 +36,13 @@ function init(): void {
 }
 
 function getSetupModalElements(): SetupModalElements {
-    const modal = document.getElementById("setupModal");
-    const fenInput = document.getElementById("fenInput") as HTMLInputElement | null;
-    const startTypeSelect = document.getElementById("startTypeSelect") as HTMLSelectElement | null;
-    const colorSelect = document.getElementById("colorSelect") as HTMLSelectElement | null;
-    const startGameBtn = document.getElementById("startGameBtn") as HTMLButtonElement | null;
-    const cancelSetupBtn = document.getElementById("cancelSetupBtn") as HTMLButtonElement | null;
-    const fenError = document.getElementById("fenError");
+    const modal: HTMLElement | null = document.getElementById("setupModal");
+    const fenInput: HTMLInputElement | null = document.getElementById("fenInput") as HTMLInputElement | null;
+    const startTypeSelect: HTMLSelectElement | null = document.getElementById("startTypeSelect") as HTMLSelectElement | null;
+    const colorSelect: HTMLSelectElement | null = document.getElementById("colorSelect") as HTMLSelectElement | null;
+    const startGameBtn: HTMLButtonElement | null = document.getElementById("startGameBtn") as HTMLButtonElement | null;
+    const cancelSetupBtn: HTMLButtonElement | null = document.getElementById("cancelSetupBtn") as HTMLButtonElement | null;
+    const fenError: HTMLElement | null = document.getElementById("fenError");
     if (!modal || !fenInput || !startTypeSelect || !colorSelect || !startGameBtn || !cancelSetupBtn || !fenError) {
         throw new Error("Setup modal initialization failed: One or more required DOM elements are missing.");
     }

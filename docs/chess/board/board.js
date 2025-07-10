@@ -6,8 +6,8 @@ export class Board {
         this._grid = [];
         this.setupGrid();
     }
-    setupGrid() {
-        this._grid = Array.from({ length: BOARD_HEIGHT }, () => Array.from({ length: BOARD_WIDTH }, () => null));
+    get grid() {
+        return this._grid;
     }
     populateGrid(pieces) {
         this.assertEmpty();
@@ -53,11 +53,6 @@ export class Board {
     getPiecesByColor(color) {
         return this.getAllPieces().filter(piece => piece.color === color);
     }
-    assertEmpty() {
-        if (this.getAllPieces().length > 0) {
-            throw new Error("Can not complete action: board is not empty.");
-        }
-    }
     clone() {
         const clone = new Board();
         const piecesCopy = this.getAllPieces().map(piece => piece.clone());
@@ -67,7 +62,12 @@ export class Board {
     isValidPosition(pos) {
         return pos.x >= 0 && pos.x < BOARD_WIDTH && pos.y >= 0 && pos.y < BOARD_HEIGHT;
     }
-    get grid() {
-        return this._grid;
+    setupGrid() {
+        this._grid = Array.from({ length: BOARD_HEIGHT }, () => Array.from({ length: BOARD_WIDTH }, () => null));
+    }
+    assertEmpty() {
+        if (this.getAllPieces().length > 0) {
+            throw new Error("Can not complete action: board is not empty.");
+        }
     }
 }

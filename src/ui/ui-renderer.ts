@@ -7,18 +7,23 @@ import { Move } from "../chess/types/move.js";
 import { moveToSAN } from "../chess/util/move-to-san.js";
 
 export class UiRenderer {
-    private statusElement: HTMLElement;
+
+    private _statusElement: HTMLElement;
 
     public constructor(statusElementId: string = "status") {
         const statusEl: HTMLElement | null = document.getElementById(statusElementId);
         if (!statusEl) throw new Error("UI status element not found");
-        this.statusElement = statusEl;
+        this._statusElement = statusEl;
 
         const board: HTMLElement | null = document.getElementById("chessBoard");
         if (board) {
             board.addEventListener("contextmenu", (e) => e.preventDefault());
         }
     }
+
+
+    // Public Methods
+
 
     public render(game: Game, activeMoveIndex: number | null): void {
         this.clearBoard();
@@ -27,40 +32,15 @@ export class UiRenderer {
         this.renderMoveHistory(game.moveHistory, game, activeMoveIndex);
     }
 
-    public clearBoard(): void {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
-                if (square) square.innerHTML = "";
-            }
+    public renderPlayerNames(whiteName: string, blackName: string): void {
+        const whiteNameEl: HTMLElement | null = document.getElementById('playerWhiteName');
+        const blackNameEl: HTMLElement | null = document.getElementById('playerBlackName');
+        if (whiteNameEl) {
+            whiteNameEl.textContent = `White: ${whiteName}`;
         }
-    }
-
-    public renderPieces(game: Game): void {
-        for (const piece of game.board.getAllPieces()) {
-            if (!piece.isActive()) continue;
-            const { x, y } = piece.position;
-            const file: typeof FILES[number] = FILES[x];
-            const rank: number = y + 1;
-            const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
-            if (square) {
-                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="false" />`;
-            }
+        if (blackNameEl) {
+            blackNameEl.textContent = `Black: ${blackName}`;
         }
-    }
-
-    private getPieceIconPath(piece: Piece): string {
-        const colorPrefix: "w" | "b" = piece.color === "white" ? "w" : "b";
-        const typeMap: Record<string, string> = {
-            king: "K",
-            queen: "Q",
-            rook: "R",
-            bishop: "B",
-            knight: "N",
-            pawn: "P"
-        };
-        const typeLetter: string = typeMap[piece.type];
-        return `/icons/${colorPrefix}${typeLetter}.svg`;
     }
 
     public renderStatus(status: GameStatus, activeColor: string): void {
@@ -79,7 +59,69 @@ export class UiRenderer {
             [GameStatus.FiftyMoveRule]: "Draw by fifty-move rule."
         };
 
-        this.statusElement.textContent = statusMessages[status] ?? "Game ended.";
+        this._statusElement.textContent = statusMessages[status] ?? "Game ended.";
+    }
+
+    public highlightSquare(squareId: string, type: "highlighted" | "targethighlighted" = "highlighted"): void {
+        const square: HTMLElement | null = document.getElementById(squareId);
+        if (square) square.classList.add(type);
+    }
+
+    public highlightLastMove(from: string, to: string): void {
+        this.resetLastMoveHighlights();
+        const fromSquare: HTMLElement | null = document.getElementById(from);
+        const toSquare: HTMLElement | null = document.getElementById(to);
+        if (fromSquare && toSquare) {
+            fromSquare.classList.add("lastmove");
+            toSquare.classList.add("lastmove");
+        }
+    }
+
+    public selectSquare(squareId: string): void {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                const sq: HTMLElement | null = document.getElementById(`${file}${rank}`);
+                if (sq) sq.classList.remove("selected");
+            }
+        }
+        const square: HTMLElement | null = document.getElementById(squareId);
+        if (square) square.classList.add("selected");
+    }
+
+    public highlightCheckSquare(game: Game): void {
+        this.resetCheckHighlights();
+        const king: Piece | undefined = game.board.getPiecesByColor(game.activeColor).find(p => p.type === "king" && p.isActive());
+        if (!king) return;
+        if (game.isKingInCheck(king.color)) {
+            const file: string = FILES[king.position.x];
+            const rank: number = king.position.y + 1;
+            const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
+            if (square) square.classList.add("checkhighlighted");
+        }
+    }
+
+    public resetHighlights(): void {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeHighlight(`${file}${rank}`);
+            }
+        }
+    }
+
+    public resetLastMoveHighlights(): void {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeLastMoveHighlight(`${file}${rank}`);
+            }
+        }
+    }
+
+    public resetSelectHighlights(): void {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                this.removeSelectHighlight(`${file}${rank}`);
+            }
+        }
     }
 
     public renderMoveHistory(moveHistory: Move[], game: Game, activeMoveIndex: number | null): void {
@@ -199,6 +241,32 @@ export class UiRenderer {
         this.scrollSelectedMoveIntoView();
     }
 
+
+    // Helpers
+
+
+    private clearBoard(): void {
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
+                if (square) square.innerHTML = "";
+            }
+        }
+    }
+
+    private renderPieces(game: Game): void {
+        for (const piece of game.board.getAllPieces()) {
+            if (!piece.isActive()) continue;
+            const { x, y } = piece.position;
+            const file: typeof FILES[number] = FILES[x];
+            const rank: number = y + 1;
+            const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
+            if (square) {
+                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="false" />`;
+            }
+        }
+    }
+
     private createEmptyMoveHistoryCell(className: string): HTMLSpanElement {
         const cell: HTMLSpanElement = document.createElement("span");
         cell.className = className;
@@ -248,52 +316,6 @@ export class UiRenderer {
         }, 0);
     }
 
-    public highlightSquare(squareId: string, type: "highlighted" | "targethighlighted" = "highlighted"): void {
-        const square: HTMLElement | null = document.getElementById(squareId);
-        if (square) square.classList.add(type);
-    }
-
-    public highlightLastMove(from: string, to: string): void {
-        this.resetLastMoveHighlights();
-        const fromSquare: HTMLElement | null = document.getElementById(from);
-        const toSquare: HTMLElement | null = document.getElementById(to);
-        if (fromSquare && toSquare) {
-            fromSquare.classList.add("lastmove");
-            toSquare.classList.add("lastmove");
-        }
-    }
-
-    public selectSquare(squareId: string): void {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                const sq: HTMLElement | null = document.getElementById(`${file}${rank}`);
-                if (sq) sq.classList.remove("selected");
-            }
-        }
-        const square: HTMLElement | null = document.getElementById(squareId);
-        if (square) square.classList.add("selected");
-    }
-
-    public highlightCheckSquare(game: Game): void {
-        this.resetCheckHighlights();
-        const king: Piece | undefined = game.board.getPiecesByColor(game.activeColor).find(p => p.type === "king" && p.isActive());
-        if (!king) return;
-        if (game.isKingInCheck(king.color)) {
-            const file: string = FILES[king.position.x];
-            const rank: number = king.position.y + 1;
-            const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
-            if (square) square.classList.add("checkhighlighted");
-        }
-    }
-
-    public resetSelectHighlights(): void {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                this.removeSelectHighlight(`${file}${rank}`);
-            }
-        }
-    }
-
     private removeSelectHighlight(squareId: string): void {
         const square: HTMLElement | null = document.getElementById(squareId);
         if (square) {
@@ -306,14 +328,6 @@ export class UiRenderer {
         if (square) {
             square.classList.remove("highlighted");
             square.classList.remove("targethighlighted");
-        }
-    }
-
-    public resetHighlights(): void {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                this.removeHighlight(`${file}${rank}`);
-            }
         }
     }
 
@@ -332,14 +346,6 @@ export class UiRenderer {
         }
     }
 
-    public resetLastMoveHighlights(): void {
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                this.removeLastMoveHighlight(`${file}${rank}`);
-            }
-        }
-    }
-
     private removeLastMoveHighlight(squareId: string): void {
         const square: HTMLElement | null = document.getElementById(squareId);
         if (square) {
@@ -347,14 +353,17 @@ export class UiRenderer {
         }
     }
 
-    public renderPlayerNames(whiteName: string, blackName: string): void {
-        const whiteNameEl: HTMLElement | null = document.getElementById('playerWhiteName');
-        const blackNameEl: HTMLElement | null = document.getElementById('playerBlackName');
-        if (whiteNameEl) {
-            whiteNameEl.textContent = `White: ${whiteName}`;
-        }
-        if (blackNameEl) {
-            blackNameEl.textContent = `Black: ${blackName}`;
-        }
+    private getPieceIconPath(piece: Piece): string {
+        const colorPrefix: "w" | "b" = piece.color === "white" ? "w" : "b";
+        const typeMap: Record<string, string> = {
+            king: "K",
+            queen: "Q",
+            rook: "R",
+            bishop: "B",
+            knight: "N",
+            pawn: "P"
+        };
+        const typeLetter: string = typeMap[piece.type];
+        return `/icons/${colorPrefix}${typeLetter}.svg`;
     }
 }

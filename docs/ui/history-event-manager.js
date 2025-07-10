@@ -5,13 +5,6 @@ export class HistoryEventManager {
         this._resetBtn = document.getElementById(resetBtnid);
         this.setupHistoryRoster(historyColumnid);
     }
-    setupHistoryRoster(historyColumnid) {
-        const roster = document.getElementsByClassName(historyColumnid);
-        if (roster)
-            this._historyRoster = Array.from(roster);
-        else
-            this._historyRoster = null;
-    }
     setupHistoryEventListeners(handlers) {
         this._handlers = handlers;
         if (this._goBackBtn) {
@@ -27,6 +20,13 @@ export class HistoryEventManager {
     updateHistoryRoster() {
         this.setupHistoryRoster("move-history-index");
         this.applyHistoryEventListeners();
+    }
+    setupHistoryRoster(historyColumnid) {
+        const roster = document.getElementsByClassName(historyColumnid);
+        if (roster)
+            this._historyRoster = Array.from(roster);
+        else
+            this._historyRoster = null;
     }
     applyHistoryEventListeners() {
         if (this._historyRoster) {
