@@ -3,7 +3,6 @@ export class SoundManager {
     private _isMuted = false;
     private _userHasInteracted = false;
 
-
     public constructor() {
 
     }

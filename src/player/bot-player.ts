@@ -4,8 +4,10 @@ import { Move } from "../chess/types/move.js";
 import { Player } from "./player.js";
 
 export abstract class BotPlayer extends Player {
-    constructor(name: string, color: Color) {
+
+    public constructor(name: string, color: Color) {
         super(name, color, true);
     }
-    abstract getMove(game: Game): Promise<Move>;
+
+    public abstract getMove(game: Game): Promise<Move>;
 }

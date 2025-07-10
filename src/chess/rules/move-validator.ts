@@ -12,7 +12,7 @@ import { PieceMoveValidator } from "../types/piece-move-validator.js";
 import { PieceType } from "../types/piece-type.js";
 import { Position } from "../types/position.js";
 
-export class MoveValidator {
+export class MoveValidator implements MoveValidator {
 
     private constructor() { }
 
@@ -31,6 +31,33 @@ export class MoveValidator {
             throw new Error(`Can not validate move. Unknown piece type: ${move.piece}`);
         }
         return (validator(game, move) && !MoveValidator.leavesKingInCheck(game, move));
+    }
+
+    public static isSquareAttacked(game: Game, pos: Position, byColor: Color): boolean {
+        for (const piece of game.board.getPiecesByColor(byColor)) {
+            if (!piece.isActive()) continue;
+            const move: Move = {
+                from: piece.position,
+                to: pos,
+                piece: piece.type,
+                color: byColor
+            };
+
+            if (piece.type === PieceType.King) {
+                const dx: number = Math.abs(piece.position.x - pos.x);
+                const dy: number = Math.abs(piece.position.y - pos.y);
+                if ((dx <= 1 && dy <= 1) && (dx + dy > 0)) {
+                    return true;
+                }
+            } else {
+                const validator: PieceMoveValidator = MoveValidator.validators[piece.type];
+                if (validator && validator(game, move)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static validatePawnMove(game: Game, move: Move): boolean {
@@ -294,32 +321,5 @@ export class MoveValidator {
         }
 
         return true;
-    }
-
-    public static isSquareAttacked(game: Game, pos: Position, byColor: Color): boolean {
-        for (const piece of game.board.getPiecesByColor(byColor)) {
-            if (!piece.isActive()) continue;
-            const move: Move = {
-                from: piece.position,
-                to: pos,
-                piece: piece.type,
-                color: byColor
-            };
-
-            if (piece.type === PieceType.King) {
-                const dx: number = Math.abs(piece.position.x - pos.x);
-                const dy: number = Math.abs(piece.position.y - pos.y);
-                if ((dx <= 1 && dy <= 1) && (dx + dy > 0)) {
-                    return true;
-                }
-            } else {
-                const validator: PieceMoveValidator = MoveValidator.validators[piece.type];
-                if (validator && validator(game, move)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 }

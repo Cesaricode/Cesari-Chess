@@ -11,7 +11,7 @@ export class ControlEventManager {
     private homeBtn: HTMLButtonElement | null;
     private flipBtn: HTMLButtonElement | null;
 
-    constructor(
+    public constructor(
         undoBtnId: string = "undoBtn",
         redoBtnId: string = "redoBtn",
         homeBtnId: string = "homeBtn",

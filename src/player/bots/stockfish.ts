@@ -5,11 +5,12 @@ import { Color } from "../../chess/types/color.js";
 import { StockfishService } from "../../engine/stockfish-service.js";
 
 export class StockfishBot extends BotPlayer {
-    constructor(color: Color) {
+
+    public constructor(color: Color) {
         super("Stockfish", color);
     }
 
-    async getMove(game: Game): Promise<Move> {
+    public async getMove(game: Game): Promise<Move> {
         return StockfishService.getBestMove(game);
     }
 }

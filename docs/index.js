@@ -24,7 +24,7 @@ function init() {
         }
     }
 }
-function showSetupModal(opponent) {
+function getSetupModalElements() {
     const modal = document.getElementById("setupModal");
     const fenInput = document.getElementById("fenInput");
     const startTypeSelect = document.getElementById("startTypeSelect");
@@ -32,8 +32,13 @@ function showSetupModal(opponent) {
     const startGameBtn = document.getElementById("startGameBtn");
     const cancelSetupBtn = document.getElementById("cancelSetupBtn");
     const fenError = document.getElementById("fenError");
-    if (!modal || !fenInput || !startTypeSelect || !colorSelect || !startGameBtn || !cancelSetupBtn || !fenError)
-        return;
+    if (!modal || !fenInput || !startTypeSelect || !colorSelect || !startGameBtn || !cancelSetupBtn || !fenError) {
+        throw new Error("Setup modal initialization failed: One or more required DOM elements are missing.");
+    }
+    return { modal, fenInput, startTypeSelect, colorSelect, startGameBtn, cancelSetupBtn, fenError };
+}
+function showSetupModal(opponent) {
+    const { modal, fenInput, startTypeSelect, colorSelect, startGameBtn, cancelSetupBtn, fenError } = getSetupModalElements();
     modal.style.display = "block";
     fenInput.style.display = "none";
     startTypeSelect.value = "standard";

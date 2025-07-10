@@ -12,7 +12,7 @@ export class HistoryEventManager {
     private _historyRoster!: HTMLElement[] | null;
     private _handlers?: HistoryControlHandler;
 
-    constructor(
+    public constructor(
         goBackBtnid: string = "moveHistoryBackBtn",
         goForwardBtnid: string = "moveHistoryForwardBtn",
         resetBtnid: string = "moveHistoryToCurrentBtn",

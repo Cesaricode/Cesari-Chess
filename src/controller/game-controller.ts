@@ -17,6 +17,8 @@ import { SaveGameData } from "../types/save-game-data.js";
 import { SoundManager } from "../sounds/sound-manager.js";
 import { BoardHighlighter } from "../ui/board-highlighter.js";
 import { HistoryManager } from "../history/history-manager.js";
+import { GameControlManager } from "../ui/game-control-manager.js";
+import { GameStatus } from "../chess/types/game-status.js";
 
 export class GameController {
 
@@ -29,6 +31,7 @@ export class GameController {
     private _soundManager: SoundManager = new SoundManager();
 
     private _historyManager: HistoryManager = new HistoryManager();
+    private _gameControlManager: GameControlManager = new GameControlManager();
 
     private _localPlayer: Player;
     private _remotePlayer: Player;
@@ -37,8 +40,9 @@ export class GameController {
     private _isBoardEnabled: boolean = true;
     private _isBoardFlipped: boolean = false;
 
-    private _resignRestartState: "resign" | "confirm" | "restart" = "resign";
-    private _resignConfirmTimeout: number | null = null;
+
+    // Initialisation
+
 
     public constructor(localPlayer: Player, remotePlayer: Player, game?: Game) {
         this._localPlayer = localPlayer;
@@ -53,7 +57,6 @@ export class GameController {
         const blackPlayer: Player = this._localPlayer.color === Color.Black ? this._localPlayer : this._remotePlayer;
         this._ui.renderPlayerNames(whitePlayer.name, blackPlayer.name);
         this.setupEventListeners();
-        this.setupResignRestartButton();
         if (this._localPlayer.color === Color.Black) {
             this.setBoardFlipped(true);
         }
@@ -80,7 +83,29 @@ export class GameController {
             onReset: () => this.resetHistoryView(),
             onGoTo: (index: number) => this.goToHistoryIndex(index)
         });
+        this._gameControlManager.setupResignRestartButton(() => this.resignGame());
+        this._gameControlManager.setupFenCopyButton(this._game);
     }
+
+
+    // Public methods & getters/setters
+
+
+    public updateControlButtons(): void {
+        this._controlEventManager.updateControlButtons(
+            this._historyManager.undoStack.length > 0,
+            this._historyManager.redoStack.length > 0,
+            this._game.status === GameStatus.Ongoing
+        );
+    }
+
+    public get historyManager(): HistoryManager {
+        return this._historyManager;
+    }
+
+
+    // Event handlers
+
 
     private async handleSquareClick(file: typeof FILES[number], rank: typeof RANKS[number]): Promise<void> {
         const pos: Position = { x: FILES.indexOf(file), y: rank - 1 };
@@ -92,7 +117,7 @@ export class GameController {
         }
         this.resetHistoryView();
 
-        if (this._game.status !== "ongoing") {
+        if (this._game.status !== GameStatus.Ongoing) {
             this._boardEventManager.removeBoardEventListeners();
         }
 
@@ -139,6 +164,178 @@ export class GameController {
         this._selectedSquare = null;
     }
 
+
+    // Game flow
+
+
+    private async attemptMove(move: Move): Promise<void> {
+        const targetPiece: Piece | null = this._game.board.getPieceAt(move.to);
+        const gameClone: Game = this._game.clone();
+        if (this._game.makeMove(move)) {
+            this._historyManager.pushUndo(gameClone);
+            await this.handleSuccesfulMove(move, targetPiece);
+        }
+    }
+
+    private async handleSuccesfulMove(move: Move, targetPiece: Piece | null): Promise<void> {
+        this._historyManager.clearRedo();
+        this._selectedSquare = null;
+        this._boardHighLighter.resetAllHiglights();
+        this.renderAppropriateGameState();
+        this._boardHighLighter.highlightLastMove(this._game,);
+        this.updateControlButtons();
+        this._ui.renderStatus(this._game.status, this._game.activeColor);
+        this._gameControlManager.resetResignRestartButton();
+
+        if (this._game.status !== GameStatus.Ongoing) {
+            this._soundManager.playGenericNotifySound();
+            this._gameControlManager.setResignRestartToRestart();
+        } else if (targetPiece && targetPiece.color !== move.color) {
+            this._soundManager.playCaptureSound();
+        } else {
+            this._soundManager.playMoveSound();
+        }
+
+        this.updateSaveGameState();
+        await this.tryBotMove();
+    }
+
+    private async tryBotMove(): Promise<void> {
+        if (this._game.status === GameStatus.Ongoing) {
+            const currentPlayer: Player = this._game.activeColor === this._localPlayer.color ? this._localPlayer : this._remotePlayer;
+            if (currentPlayer.isBot && typeof (currentPlayer as BotPlayer).getMove === "function") {
+                this.disableBoard();
+                const move: Move = await (currentPlayer as BotPlayer).getMove(this._game);
+                await this.attemptMove(move);
+                this.enableBoard();
+            }
+        }
+    }
+
+    private resignGame(): void {
+        if (this._game.activeColor === Color.White) {
+            this._game.resign(Color.White);
+        } else {
+            this._game.resign(Color.Black);
+        }
+        this.disableBoard();
+        this.updateSaveGameState();
+        this.updateControlButtons();
+        this.renderAppropriateGameState();
+        this._ui.renderStatus(this._game.status, this._game.activeColor);
+
+        this._soundManager.playGenericNotifySound();
+    }
+
+
+    // Game savestate
+
+
+    private saveGameState(): void {
+        if (!this._remotePlayer.isBot) return;
+
+        const saveData: SaveGameData = {
+            fen: FEN.serializeFullFEN(this._game),
+            initialFen: this._game.initialFEN,
+            moveHistory: this._game.moveHistory,
+            localColor: this._localPlayer.color,
+            botType: this._remotePlayer.name,
+            botColor: this._remotePlayer.color,
+        };
+        localStorage.setItem("cesariChessSave", JSON.stringify(saveData));
+    }
+
+    private updateSaveGameState() {
+        if (this._game.status === GameStatus.Ongoing) {
+            this.saveGameState();
+        } else {
+            localStorage.removeItem("cesariChessSave");
+        }
+    }
+
+
+    // Rendering
+
+
+    private renderAppropriateGameState(): void {
+        if ((this._historyManager.lastHistoryIndex === null && this._historyManager.historyIndex !== null) ||
+            (this._historyManager.lastHistoryIndex !== null && this._historyManager.historyIndex === null)) {
+            this._boardHighLighter.resetAllHiglights();
+        }
+        this._historyManager.lastHistoryIndex = this._historyManager.historyIndex;
+
+        const { gameToRender, activeMoveIndex } = this._historyManager.getDisplayGameAndMoveIndex(this._game);
+        this._ui.render(gameToRender, activeMoveIndex);
+        this._boardHighLighter.highlightHistoryMove(gameToRender, activeMoveIndex);
+        this._historyEventManager.updateHistoryRoster();
+    }
+
+
+    // Undo & redo / History navigation
+
+
+    private undo(): void {
+        this._game = this._historyManager.undo(
+            this._game,
+            this._remotePlayer.isBot,
+            this._localPlayer.color,
+            this._remotePlayer
+        ) ?? this._game;
+        this._boardHighLighter.resetAllHiglights();
+        this.renderAppropriateGameState();
+        this._boardHighLighter.highlightLastMove(this._game,);
+        this.updateControlButtons();
+    }
+
+    private redo(): void {
+        this._game = this._historyManager.redo(
+            this._game,
+            this._remotePlayer.isBot,
+            this._localPlayer.color,
+            this._remotePlayer
+        ) ?? this._game;
+        this._boardHighLighter.resetAllHiglights();
+        this.renderAppropriateGameState();
+        this._boardHighLighter.highlightLastMove(this._game,);
+        this.updateControlButtons();
+    }
+
+    private resetHistoryView(): void {
+        this._historyManager.historyIndex = null;
+        this.renderAppropriateGameState();
+    }
+
+    private goBackInHistory(): void {
+        this._selectedSquare = null;
+        this._historyManager.goBackInHistory();
+        this.renderAppropriateGameState();
+    }
+
+    private goForwardInHistory(): void {
+        this._selectedSquare = null;
+        this._historyManager.goForwardInHistory();
+        this.renderAppropriateGameState();
+    }
+
+    private goToHistoryIndex(index: number): void {
+        this._selectedSquare = null;
+        this._historyManager.goToHistoryIndex(index);
+        this.renderAppropriateGameState();
+    }
+
+
+    // Helpers
+
+
+    private setBoardFlipped(flipped: boolean): void {
+        this._isBoardFlipped = flipped;
+        const boardContainer: HTMLElement | null = document.getElementById("chessBoardContainer");
+        if (boardContainer) {
+            boardContainer.classList.toggle("flipped", this._isBoardFlipped);
+        }
+        this.renderAppropriateGameState();
+    }
+
     private isSelectingSamePiece(fromPiece: Piece | null, toPiece: Piece | null): boolean {
         return fromPiece === toPiece;
     }
@@ -182,238 +379,11 @@ export class GameController {
         return { from, to, piece: fromPiece.type, color, ...(promotion ? { promotion } : {}) };
     }
 
-    private async attemptMove(move: Move): Promise<void> {
-        const targetPiece: Piece | null = this._game.board.getPieceAt(move.to);
-        const gameClone: Game = this._game.clone();
-        if (this._game.makeMove(move)) {
-            this._historyManager.pushUndo(gameClone);
-            this.handleSuccesfulMove(move, targetPiece);
-        }
-    }
-
-    private async handleSuccesfulMove(move: Move, targetPiece: Piece | null): Promise<void> {
-        this._historyManager.clearRedo();
-        this._selectedSquare = null;
-        this._ui.resetHighlights();
-        this._ui.resetSelectHighlights();
-        this.renderAppropriateGameState();
-        this._boardHighLighter.highlightLastMove(this._game,);
-        this.updateControlButtons();
-        this._ui.renderStatus(this._game.status, this._game.activeColor);
-        this.resetResignRestartButton();
-
-        if (this._game.status !== "ongoing") {
-            this._soundManager.playGenericNotifySound();
-            this.setResignRestartToRestart();
-        } else if (targetPiece && targetPiece.color !== move.color) {
-            this._soundManager.playCaptureSound();
-        } else {
-            this._soundManager.playMoveSound();
-        }
-
-        this.updateSaveGameState();
-        await this.tryBotMove();
-    }
-
-    private updateSaveGameState() {
-        if (this._game.status === "ongoing") {
-            this.saveGameState();
-        } else {
-            localStorage.removeItem("cesariChessSave");
-        }
-    }
-
-    private async tryBotMove(): Promise<void> {
-        if (this._game.status === "ongoing") {
-            const currentPlayer: Player = this._game.activeColor === this._localPlayer.color ? this._localPlayer : this._remotePlayer;
-            if (currentPlayer.isBot && typeof (currentPlayer as BotPlayer).getMove === "function") {
-                this.disableBoard();
-                const move: Move = await (currentPlayer as BotPlayer).getMove(this._game);
-                await this.attemptMove(move);
-                this.enableBoard();
-            }
-        }
-    }
-
-    public undo(): void {
-        this._game = this._historyManager.undo(
-            this._game,
-            this._remotePlayer.isBot,
-            this._localPlayer.color,
-            this._remotePlayer
-        ) ?? this._game;
-        this._ui.resetHighlights();
-        this._ui.resetSelectHighlights();
-        this.renderAppropriateGameState();
-        this._boardHighLighter.highlightLastMove(this._game,);
-        this.updateControlButtons();
-    }
-
-    public redo(): void {
-        this._game = this._historyManager.redo(
-            this._game,
-            this._remotePlayer.isBot,
-            this._localPlayer.color,
-            this._remotePlayer
-        ) ?? this._game;
-        this._ui.resetHighlights();
-        this._ui.resetSelectHighlights();
-        this.renderAppropriateGameState();
-        this._boardHighLighter.highlightLastMove(this._game,);
-        this.updateControlButtons();
-    }
-
     private enableBoard(): void {
         this._isBoardEnabled = true;
     }
 
     private disableBoard(): void {
         this._isBoardEnabled = false;
-    }
-
-    public updateControlButtons(): void {
-        this._controlEventManager.updateControlButtons(
-            this._historyManager.undoStack.length > 0,
-            this._historyManager.redoStack.length > 0,
-            this._game.status === "ongoing"
-        );
-    }
-
-    private renderAppropriateGameState(): void {
-        if ((this._historyManager.lastHistoryIndex === null && this._historyManager.historyIndex !== null) ||
-            (this._historyManager.lastHistoryIndex !== null && this._historyManager.historyIndex === null)) {
-            this._ui.resetHighlights();
-            this._ui.resetSelectHighlights();
-        }
-        this._historyManager.lastHistoryIndex = this._historyManager.historyIndex;
-
-        const { gameToRender, activeMoveIndex } = this._historyManager.getDisplayGameAndMoveIndex(this._game);
-        this._ui.render(gameToRender, activeMoveIndex);
-        this._boardHighLighter.highlightHistoryMove(gameToRender, activeMoveIndex);
-        this._historyEventManager.updateHistoryRoster();
-    }
-
-    private resetHistoryView(): void {
-        this._historyManager.historyIndex = null;
-        this.renderAppropriateGameState();
-    }
-
-    private goBackInHistory(): void {
-        this._selectedSquare = null;
-        this._historyManager.goBackInHistory();
-        this.renderAppropriateGameState();
-    }
-
-    private goForwardInHistory(): void {
-        this._selectedSquare = null;
-        this._historyManager.goForwardInHistory();
-        this.renderAppropriateGameState();
-    }
-
-    private goToHistoryIndex(index: number): void {
-        this._selectedSquare = null;
-        this._historyManager.goToHistoryIndex(index);
-        this.renderAppropriateGameState();
-    }
-
-    private setBoardFlipped(flipped: boolean): void {
-        this._isBoardFlipped = flipped;
-        const boardContainer: HTMLElement | null = document.getElementById("chessBoardContainer");
-        if (boardContainer) {
-            boardContainer.classList.toggle("flipped", this._isBoardFlipped);
-        }
-        this.renderAppropriateGameState();
-    }
-
-    private saveGameState(): void {
-        if (!this._remotePlayer.isBot) return;
-
-        const saveData: SaveGameData = {
-            fen: FEN.serializeFullFEN(this._game),
-            initialFen: this._game.initialFEN,
-            moveHistory: this._game.moveHistory,
-            localColor: this._localPlayer.color,
-            botType: this._remotePlayer.name,
-            botColor: this._remotePlayer.color,
-        };
-        localStorage.setItem("cesariChessSave", JSON.stringify(saveData));
-    }
-
-    private setupResignRestartButton(): void {
-        const btn: HTMLButtonElement | null = document.getElementById("resignRestartBtn") as HTMLButtonElement | null;
-        if (!btn) return;
-
-        btn.onclick = () => {
-            btn.classList.remove("button-confirm", "button-restart");
-            if (this._resignRestartState === "resign") {
-                btn.querySelector(".btn-label")!.textContent = "Confirm Resign";
-                btn.classList.add("button-confirm");
-                this._resignRestartState = "confirm";
-
-                if (this._resignConfirmTimeout !== null) {
-                    clearTimeout(this._resignConfirmTimeout);
-                }
-                this._resignConfirmTimeout = window.setTimeout(() => {
-                    this.resetResignRestartButton();
-                    this._resignConfirmTimeout = null;
-                }, 5000);
-
-            } else if (this._resignRestartState === "confirm") {
-                if (this._resignConfirmTimeout !== null) {
-                    clearTimeout(this._resignConfirmTimeout);
-                    this._resignConfirmTimeout = null;
-                }
-                this.resignGame();
-                btn.querySelector(".btn-label")!.textContent = "Restart Game";
-                btn.classList.add("button-restart");
-                this._resignRestartState = "restart";
-            } else if (this._resignRestartState === "restart") {
-                window.location.reload();
-            }
-        };
-    }
-
-    private resetResignRestartButton(): void {
-        const btn: HTMLButtonElement | null = document.getElementById("resignRestartBtn") as HTMLButtonElement | null;
-        if (!btn) return;
-        this._resignRestartState = "resign";
-        btn.querySelector(".btn-label")!.textContent = "Resign";
-        btn.classList.remove("button-confirm", "button-restart");
-        if (this._resignConfirmTimeout !== null) {
-            clearTimeout(this._resignConfirmTimeout);
-            this._resignConfirmTimeout = null;
-        }
-    }
-
-    private setResignRestartToRestart(): void {
-        const btn: HTMLButtonElement | null = document.getElementById("resignRestartBtn") as HTMLButtonElement | null;
-        if (!btn) return;
-        this._resignRestartState = "restart";
-        btn.querySelector(".btn-label")!.textContent = "Restart Game";
-        btn.classList.remove("button-confirm");
-        btn.classList.add("button-restart");
-        if (this._resignConfirmTimeout !== null) {
-            clearTimeout(this._resignConfirmTimeout);
-            this._resignConfirmTimeout = null;
-        }
-    }
-
-    private resignGame(): void {
-        if (this._game.activeColor === Color.White) {
-            this._game.resign(Color.White);
-        } else {
-            this._game.resign(Color.Black);
-        }
-        this._isBoardEnabled = false;
-        this.updateSaveGameState();
-        this.updateControlButtons();
-        this.renderAppropriateGameState();
-        this._ui.renderStatus(this._game.status, this._game.activeColor);
-
-        this._soundManager.playGenericNotifySound();
-    }
-
-    public get historyManager(): HistoryManager {
-        return this._historyManager;
     }
 }

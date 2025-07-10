@@ -1,16 +1,16 @@
-export function getModeFromUrl() {
+export function getModeFromUrl(): string | null {
     const params: URLSearchParams = new URLSearchParams(window.location.search);
-    return params.get("mode") || "self";
+    return params.get("mode");
 }
 
-export function getColorFromUrl(): string {
+export function getColorFromUrl(): string | null {
     const params: URLSearchParams = new URLSearchParams(window.location.search);
-    return params.get("color") || "white";
+    return params.get("color");
 }
 
 export function getFENFromUrl(): string | null {
     const params: URLSearchParams = new URLSearchParams(window.location.search);
-    return params.get("fen") || null;
+    return params.get("fen");
 }
 
 export function getContinueFromUrl(): string | null {

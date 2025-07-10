@@ -11,6 +11,8 @@ export class GameControllerFactory {
 
     private constructor() { }
 
+    // Standard games
+
     public static async createLocalVsBot(bot: Player, color?: Color): Promise<GameController> {
         const localColor: Color = color ?? Color.White;
         const botColor: Color = localColor === Color.White ? Color.Black : Color.White;
@@ -44,6 +46,8 @@ export class GameControllerFactory {
         await controller.init();
         return controller;
     }
+
+    // Games from FEN
 
     public static async createLocalVsBotFromFEN(bot: Player, fen: string, color?: Color): Promise<GameController> {
         if (!FEN.isValidFEN(fen)) throw new Error("Error creating gamecontroller: Invalid FEN string");
@@ -81,6 +85,8 @@ export class GameControllerFactory {
         await controller.init();
         return controller;
     }
+
+    // Games from savestate
 
     public static async loadSavedGame(): Promise<GameController | null> {
         const data: string | null = localStorage.getItem("cesariChessSave");

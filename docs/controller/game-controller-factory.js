@@ -14,6 +14,7 @@ import { PlayerFactory } from "../player/player-factory.js";
 import { FEN } from "../chess/util/fen.js";
 export class GameControllerFactory {
     constructor() { }
+    // Standard games
     static createLocalVsBot(bot, color) {
         return __awaiter(this, void 0, void 0, function* () {
             const localColor = color !== null && color !== void 0 ? color : Color.White;
@@ -51,6 +52,7 @@ export class GameControllerFactory {
             return controller;
         });
     }
+    // Games from FEN
     static createLocalVsBotFromFEN(bot, fen, color) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!FEN.isValidFEN(fen))
@@ -94,6 +96,7 @@ export class GameControllerFactory {
             return controller;
         });
     }
+    // Games from savestate
     static loadSavedGame() {
         return __awaiter(this, void 0, void 0, function* () {
             const data = localStorage.getItem("cesariChessSave");

@@ -5,7 +5,11 @@ type SquareClickHandler = (file: typeof FILES[number], rank: typeof RANKS[number
 export class BoardEventManager {
     private boardListeners: Array<{ el: HTMLElement, handler: EventListener; }> = [];
 
-    setupBoardEventListeners(squareClick: SquareClickHandler): void {
+    public constructor() {
+
+    }
+
+    public setupBoardEventListeners(squareClick: SquareClickHandler): void {
         this.removeBoardEventListeners();
         for (const file of FILES) {
             for (const rank of RANKS) {
@@ -19,7 +23,7 @@ export class BoardEventManager {
         }
     }
 
-    removeBoardEventListeners(): void {
+    public removeBoardEventListeners(): void {
         for (const { el, handler } of this.boardListeners) {
             el.removeEventListener("click", handler);
         }

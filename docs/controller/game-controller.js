@@ -18,7 +18,10 @@ import { FEN } from "../chess/util/fen.js";
 import { SoundManager } from "../sounds/sound-manager.js";
 import { BoardHighlighter } from "../ui/board-highlighter.js";
 import { HistoryManager } from "../history/history-manager.js";
+import { GameControlManager } from "../ui/game-control-manager.js";
+import { GameStatus } from "../chess/types/game-status.js";
 export class GameController {
+    // Initialisation
     constructor(localPlayer, remotePlayer, game) {
         this._ui = new UiRenderer();
         this._boardEventManager = new BoardEventManager();
@@ -26,11 +29,10 @@ export class GameController {
         this._historyEventManager = new HistoryEventManager();
         this._soundManager = new SoundManager();
         this._historyManager = new HistoryManager();
+        this._gameControlManager = new GameControlManager();
         this._selectedSquare = null;
         this._isBoardEnabled = true;
         this._isBoardFlipped = false;
-        this._resignRestartState = "resign";
-        this._resignConfirmTimeout = null;
         this._localPlayer = localPlayer;
         this._remotePlayer = remotePlayer;
         this._boardHighLighter = new BoardHighlighter(this._ui);
@@ -43,7 +45,6 @@ export class GameController {
             const blackPlayer = this._localPlayer.color === Color.Black ? this._localPlayer : this._remotePlayer;
             this._ui.renderPlayerNames(whitePlayer.name, blackPlayer.name);
             this.setupEventListeners();
-            this.setupResignRestartButton();
             if (this._localPlayer.color === Color.Black) {
                 this.setBoardFlipped(true);
             }
@@ -71,7 +72,17 @@ export class GameController {
             onReset: () => this.resetHistoryView(),
             onGoTo: (index) => this.goToHistoryIndex(index)
         });
+        this._gameControlManager.setupResignRestartButton(() => this.resignGame());
+        this._gameControlManager.setupFenCopyButton(this._game);
     }
+    // Public methods & getters/setters
+    updateControlButtons() {
+        this._controlEventManager.updateControlButtons(this._historyManager.undoStack.length > 0, this._historyManager.redoStack.length > 0, this._game.status === GameStatus.Ongoing);
+    }
+    get historyManager() {
+        return this._historyManager;
+    }
+    // Event handlers
     handleSquareClick(file, rank) {
         return __awaiter(this, void 0, void 0, function* () {
             const pos = { x: FILES.indexOf(file), y: rank - 1 };
@@ -82,7 +93,7 @@ export class GameController {
                 yield this.handleSecondSquareClick(pos);
             }
             this.resetHistoryView();
-            if (this._game.status !== "ongoing") {
+            if (this._game.status !== GameStatus.Ongoing) {
                 this._boardEventManager.removeBoardEventListeners();
             }
             if (!this._soundManager.userHasInteracted) {
@@ -124,6 +135,147 @@ export class GameController {
             this._selectedSquare = null;
         });
     }
+    // Game flow
+    attemptMove(move) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const targetPiece = this._game.board.getPieceAt(move.to);
+            const gameClone = this._game.clone();
+            if (this._game.makeMove(move)) {
+                this._historyManager.pushUndo(gameClone);
+                yield this.handleSuccesfulMove(move, targetPiece);
+            }
+        });
+    }
+    handleSuccesfulMove(move, targetPiece) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this._historyManager.clearRedo();
+            this._selectedSquare = null;
+            this._boardHighLighter.resetAllHiglights();
+            this.renderAppropriateGameState();
+            this._boardHighLighter.highlightLastMove(this._game);
+            this.updateControlButtons();
+            this._ui.renderStatus(this._game.status, this._game.activeColor);
+            this._gameControlManager.resetResignRestartButton();
+            if (this._game.status !== GameStatus.Ongoing) {
+                this._soundManager.playGenericNotifySound();
+                this._gameControlManager.setResignRestartToRestart();
+            }
+            else if (targetPiece && targetPiece.color !== move.color) {
+                this._soundManager.playCaptureSound();
+            }
+            else {
+                this._soundManager.playMoveSound();
+            }
+            this.updateSaveGameState();
+            yield this.tryBotMove();
+        });
+    }
+    tryBotMove() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this._game.status === GameStatus.Ongoing) {
+                const currentPlayer = this._game.activeColor === this._localPlayer.color ? this._localPlayer : this._remotePlayer;
+                if (currentPlayer.isBot && typeof currentPlayer.getMove === "function") {
+                    this.disableBoard();
+                    const move = yield currentPlayer.getMove(this._game);
+                    yield this.attemptMove(move);
+                    this.enableBoard();
+                }
+            }
+        });
+    }
+    resignGame() {
+        if (this._game.activeColor === Color.White) {
+            this._game.resign(Color.White);
+        }
+        else {
+            this._game.resign(Color.Black);
+        }
+        this.disableBoard();
+        this.updateSaveGameState();
+        this.updateControlButtons();
+        this.renderAppropriateGameState();
+        this._ui.renderStatus(this._game.status, this._game.activeColor);
+        this._soundManager.playGenericNotifySound();
+    }
+    // Game savestate
+    saveGameState() {
+        if (!this._remotePlayer.isBot)
+            return;
+        const saveData = {
+            fen: FEN.serializeFullFEN(this._game),
+            initialFen: this._game.initialFEN,
+            moveHistory: this._game.moveHistory,
+            localColor: this._localPlayer.color,
+            botType: this._remotePlayer.name,
+            botColor: this._remotePlayer.color,
+        };
+        localStorage.setItem("cesariChessSave", JSON.stringify(saveData));
+    }
+    updateSaveGameState() {
+        if (this._game.status === GameStatus.Ongoing) {
+            this.saveGameState();
+        }
+        else {
+            localStorage.removeItem("cesariChessSave");
+        }
+    }
+    // Rendering
+    renderAppropriateGameState() {
+        if ((this._historyManager.lastHistoryIndex === null && this._historyManager.historyIndex !== null) ||
+            (this._historyManager.lastHistoryIndex !== null && this._historyManager.historyIndex === null)) {
+            this._boardHighLighter.resetAllHiglights();
+        }
+        this._historyManager.lastHistoryIndex = this._historyManager.historyIndex;
+        const { gameToRender, activeMoveIndex } = this._historyManager.getDisplayGameAndMoveIndex(this._game);
+        this._ui.render(gameToRender, activeMoveIndex);
+        this._boardHighLighter.highlightHistoryMove(gameToRender, activeMoveIndex);
+        this._historyEventManager.updateHistoryRoster();
+    }
+    // Undo & redo / History navigation
+    undo() {
+        var _a;
+        this._game = (_a = this._historyManager.undo(this._game, this._remotePlayer.isBot, this._localPlayer.color, this._remotePlayer)) !== null && _a !== void 0 ? _a : this._game;
+        this._boardHighLighter.resetAllHiglights();
+        this.renderAppropriateGameState();
+        this._boardHighLighter.highlightLastMove(this._game);
+        this.updateControlButtons();
+    }
+    redo() {
+        var _a;
+        this._game = (_a = this._historyManager.redo(this._game, this._remotePlayer.isBot, this._localPlayer.color, this._remotePlayer)) !== null && _a !== void 0 ? _a : this._game;
+        this._boardHighLighter.resetAllHiglights();
+        this.renderAppropriateGameState();
+        this._boardHighLighter.highlightLastMove(this._game);
+        this.updateControlButtons();
+    }
+    resetHistoryView() {
+        this._historyManager.historyIndex = null;
+        this.renderAppropriateGameState();
+    }
+    goBackInHistory() {
+        this._selectedSquare = null;
+        this._historyManager.goBackInHistory();
+        this.renderAppropriateGameState();
+    }
+    goForwardInHistory() {
+        this._selectedSquare = null;
+        this._historyManager.goForwardInHistory();
+        this.renderAppropriateGameState();
+    }
+    goToHistoryIndex(index) {
+        this._selectedSquare = null;
+        this._historyManager.goToHistoryIndex(index);
+        this.renderAppropriateGameState();
+    }
+    // Helpers
+    setBoardFlipped(flipped) {
+        this._isBoardFlipped = flipped;
+        const boardContainer = document.getElementById("chessBoardContainer");
+        if (boardContainer) {
+            boardContainer.classList.toggle("flipped", this._isBoardFlipped);
+        }
+        this.renderAppropriateGameState();
+    }
     isSelectingSamePiece(fromPiece, toPiece) {
         return fromPiece === toPiece;
     }
@@ -158,214 +310,10 @@ export class GameController {
         }
         return Object.assign({ from, to, piece: fromPiece.type, color }, (promotion ? { promotion } : {}));
     }
-    attemptMove(move) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const targetPiece = this._game.board.getPieceAt(move.to);
-            const gameClone = this._game.clone();
-            if (this._game.makeMove(move)) {
-                this._historyManager.pushUndo(gameClone);
-                this.handleSuccesfulMove(move, targetPiece);
-            }
-        });
-    }
-    handleSuccesfulMove(move, targetPiece) {
-        return __awaiter(this, void 0, void 0, function* () {
-            this._historyManager.clearRedo();
-            this._selectedSquare = null;
-            this._ui.resetHighlights();
-            this._ui.resetSelectHighlights();
-            this.renderAppropriateGameState();
-            this._boardHighLighter.highlightLastMove(this._game);
-            this.updateControlButtons();
-            this._ui.renderStatus(this._game.status, this._game.activeColor);
-            this.resetResignRestartButton();
-            if (this._game.status !== "ongoing") {
-                this._soundManager.playGenericNotifySound();
-                this.setResignRestartToRestart();
-            }
-            else if (targetPiece && targetPiece.color !== move.color) {
-                this._soundManager.playCaptureSound();
-            }
-            else {
-                this._soundManager.playMoveSound();
-            }
-            this.updateSaveGameState();
-            yield this.tryBotMove();
-        });
-    }
-    updateSaveGameState() {
-        if (this._game.status === "ongoing") {
-            this.saveGameState();
-        }
-        else {
-            localStorage.removeItem("cesariChessSave");
-        }
-    }
-    tryBotMove() {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this._game.status === "ongoing") {
-                const currentPlayer = this._game.activeColor === this._localPlayer.color ? this._localPlayer : this._remotePlayer;
-                if (currentPlayer.isBot && typeof currentPlayer.getMove === "function") {
-                    this.disableBoard();
-                    const move = yield currentPlayer.getMove(this._game);
-                    yield this.attemptMove(move);
-                    this.enableBoard();
-                }
-            }
-        });
-    }
-    undo() {
-        var _a;
-        this._game = (_a = this._historyManager.undo(this._game, this._remotePlayer.isBot, this._localPlayer.color, this._remotePlayer)) !== null && _a !== void 0 ? _a : this._game;
-        this._ui.resetHighlights();
-        this._ui.resetSelectHighlights();
-        this.renderAppropriateGameState();
-        this._boardHighLighter.highlightLastMove(this._game);
-        this.updateControlButtons();
-    }
-    redo() {
-        var _a;
-        this._game = (_a = this._historyManager.redo(this._game, this._remotePlayer.isBot, this._localPlayer.color, this._remotePlayer)) !== null && _a !== void 0 ? _a : this._game;
-        this._ui.resetHighlights();
-        this._ui.resetSelectHighlights();
-        this.renderAppropriateGameState();
-        this._boardHighLighter.highlightLastMove(this._game);
-        this.updateControlButtons();
-    }
     enableBoard() {
         this._isBoardEnabled = true;
     }
     disableBoard() {
         this._isBoardEnabled = false;
-    }
-    updateControlButtons() {
-        this._controlEventManager.updateControlButtons(this._historyManager.undoStack.length > 0, this._historyManager.redoStack.length > 0, this._game.status === "ongoing");
-    }
-    renderAppropriateGameState() {
-        if ((this._historyManager.lastHistoryIndex === null && this._historyManager.historyIndex !== null) ||
-            (this._historyManager.lastHistoryIndex !== null && this._historyManager.historyIndex === null)) {
-            this._ui.resetHighlights();
-            this._ui.resetSelectHighlights();
-        }
-        this._historyManager.lastHistoryIndex = this._historyManager.historyIndex;
-        const { gameToRender, activeMoveIndex } = this._historyManager.getDisplayGameAndMoveIndex(this._game);
-        this._ui.render(gameToRender, activeMoveIndex);
-        this._boardHighLighter.highlightHistoryMove(gameToRender, activeMoveIndex);
-        this._historyEventManager.updateHistoryRoster();
-    }
-    resetHistoryView() {
-        this._historyManager.historyIndex = null;
-        this.renderAppropriateGameState();
-    }
-    goBackInHistory() {
-        this._selectedSquare = null;
-        this._historyManager.goBackInHistory();
-        this.renderAppropriateGameState();
-    }
-    goForwardInHistory() {
-        this._selectedSquare = null;
-        this._historyManager.goForwardInHistory();
-        this.renderAppropriateGameState();
-    }
-    goToHistoryIndex(index) {
-        this._selectedSquare = null;
-        this._historyManager.goToHistoryIndex(index);
-        this.renderAppropriateGameState();
-    }
-    setBoardFlipped(flipped) {
-        this._isBoardFlipped = flipped;
-        const boardContainer = document.getElementById("chessBoardContainer");
-        if (boardContainer) {
-            boardContainer.classList.toggle("flipped", this._isBoardFlipped);
-        }
-        this.renderAppropriateGameState();
-    }
-    saveGameState() {
-        if (!this._remotePlayer.isBot)
-            return;
-        const saveData = {
-            fen: FEN.serializeFullFEN(this._game),
-            initialFen: this._game.initialFEN,
-            moveHistory: this._game.moveHistory,
-            localColor: this._localPlayer.color,
-            botType: this._remotePlayer.name,
-            botColor: this._remotePlayer.color,
-        };
-        localStorage.setItem("cesariChessSave", JSON.stringify(saveData));
-    }
-    setupResignRestartButton() {
-        const btn = document.getElementById("resignRestartBtn");
-        if (!btn)
-            return;
-        btn.onclick = () => {
-            btn.classList.remove("button-confirm", "button-restart");
-            if (this._resignRestartState === "resign") {
-                btn.querySelector(".btn-label").textContent = "Confirm Resign";
-                btn.classList.add("button-confirm");
-                this._resignRestartState = "confirm";
-                if (this._resignConfirmTimeout !== null) {
-                    clearTimeout(this._resignConfirmTimeout);
-                }
-                this._resignConfirmTimeout = window.setTimeout(() => {
-                    this.resetResignRestartButton();
-                    this._resignConfirmTimeout = null;
-                }, 5000);
-            }
-            else if (this._resignRestartState === "confirm") {
-                if (this._resignConfirmTimeout !== null) {
-                    clearTimeout(this._resignConfirmTimeout);
-                    this._resignConfirmTimeout = null;
-                }
-                this.resignGame();
-                btn.querySelector(".btn-label").textContent = "Restart Game";
-                btn.classList.add("button-restart");
-                this._resignRestartState = "restart";
-            }
-            else if (this._resignRestartState === "restart") {
-                window.location.reload();
-            }
-        };
-    }
-    resetResignRestartButton() {
-        const btn = document.getElementById("resignRestartBtn");
-        if (!btn)
-            return;
-        this._resignRestartState = "resign";
-        btn.querySelector(".btn-label").textContent = "Resign";
-        btn.classList.remove("button-confirm", "button-restart");
-        if (this._resignConfirmTimeout !== null) {
-            clearTimeout(this._resignConfirmTimeout);
-            this._resignConfirmTimeout = null;
-        }
-    }
-    setResignRestartToRestart() {
-        const btn = document.getElementById("resignRestartBtn");
-        if (!btn)
-            return;
-        this._resignRestartState = "restart";
-        btn.querySelector(".btn-label").textContent = "Restart Game";
-        btn.classList.remove("button-confirm");
-        btn.classList.add("button-restart");
-        if (this._resignConfirmTimeout !== null) {
-            clearTimeout(this._resignConfirmTimeout);
-            this._resignConfirmTimeout = null;
-        }
-    }
-    resignGame() {
-        if (this._game.activeColor === Color.White) {
-            this._game.resign(Color.White);
-        }
-        else {
-            this._game.resign(Color.Black);
-        }
-        this._isBoardEnabled = false;
-        this.updateSaveGameState();
-        this.updateControlButtons();
-        this.renderAppropriateGameState();
-        this._ui.renderStatus(this._game.status, this._game.activeColor);
-        this._soundManager.playGenericNotifySound();
-    }
-    get historyManager() {
-        return this._historyManager;
     }
 }

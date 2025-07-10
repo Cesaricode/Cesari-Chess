@@ -10,8 +10,13 @@ export class BoardHighlighter {
 
     private _ui: UiRenderer;
 
-    constructor(ui: UiRenderer) {
+    public constructor(ui: UiRenderer) {
         this._ui = ui;
+    }
+
+    public resetAllHiglights(): void {
+        this._ui.resetHighlights();
+        this._ui.resetSelectHighlights();
     }
 
     public highlightLegalMoves(game: Game, piece: Piece, from: Position): void {

@@ -4,6 +4,10 @@ export class BoardHighlighter {
     constructor(ui) {
         this._ui = ui;
     }
+    resetAllHiglights() {
+        this._ui.resetHighlights();
+        this._ui.resetSelectHighlights();
+    }
     highlightLegalMoves(game, piece, from) {
         const pseudoLegalMoves = piece.getPseudoLegalMoves();
         for (const movePos of pseudoLegalMoves) {

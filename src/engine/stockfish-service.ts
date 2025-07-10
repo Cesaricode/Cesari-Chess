@@ -5,11 +5,12 @@ import { parseUciMoveToMoveObject } from "../chess/util/uci.js";
 import { StockfishApiResponse } from "./stockfish-api-interface.js";
 
 export class StockfishService {
-    static apiUrl: string = "https://stockfish.online/api/s/v2.php";
+
+    private static apiUrl: string = "https://stockfish.online/api/s/v2.php";
 
     private constructor() { }
 
-    static async getBestMove(game: Game, depth: number = 15): Promise<Move> {
+    public static async getBestMove(game: Game, depth: number = 15): Promise<Move> {
         const fen: string = FEN.serializeFullFEN(game);
         const encodedFen: string = encodeURIComponent(fen);
         const url: string = `${this.apiUrl}?fen=${encodedFen}&depth=${depth}`;
@@ -25,7 +26,7 @@ export class StockfishService {
         if (!match) {
             throw new Error(`Could not parse best move from: ${data.bestmove}`);
         }
-        const uci = match[1];
+        const uci: string = match[1];
 
         return parseUciMoveToMoveObject(uci, game);
     }

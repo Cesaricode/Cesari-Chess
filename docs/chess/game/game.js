@@ -274,7 +274,7 @@ export class Game {
     hasInsufficientMaterial() {
         const pieces = this._board.getAllPieces().filter(p => p.isActive());
         if (pieces.length === 2)
-            return true; // Only kings
+            return true;
         if (pieces.length === 3) {
             const nonKings = pieces.filter(p => p.type !== PieceType.King);
             if (nonKings.length === 1 &&

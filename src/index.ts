@@ -1,5 +1,15 @@
 import { FEN } from "./chess/util/fen.js";
 
+interface SetupModalElements {
+    modal: HTMLElement;
+    fenInput: HTMLInputElement;
+    startTypeSelect: HTMLSelectElement;
+    colorSelect: HTMLSelectElement;
+    startGameBtn: HTMLButtonElement;
+    cancelSetupBtn: HTMLButtonElement;
+    fenError: HTMLElement;
+}
+
 function init(): void {
     document.querySelectorAll<HTMLButtonElement>(".button").forEach(btn => {
         const opponent = btn.textContent?.toLowerCase().includes("yourself") ? "self"
@@ -25,16 +35,22 @@ function init(): void {
     }
 }
 
-function showSetupModal(opponent: string): void {
-    const modal: HTMLElement | null = document.getElementById("setupModal");
-    const fenInput: HTMLInputElement | null = document.getElementById("fenInput") as HTMLInputElement | null;
-    const startTypeSelect: HTMLSelectElement | null = document.getElementById("startTypeSelect") as HTMLSelectElement | null;
-    const colorSelect: HTMLSelectElement | null = document.getElementById("colorSelect") as HTMLSelectElement | null;
-    const startGameBtn: HTMLButtonElement | null = document.getElementById("startGameBtn") as HTMLButtonElement | null;
-    const cancelSetupBtn: HTMLButtonElement | null = document.getElementById("cancelSetupBtn") as HTMLButtonElement | null;
-    const fenError: HTMLElement | null = document.getElementById("fenError");
+function getSetupModalElements(): SetupModalElements {
+    const modal = document.getElementById("setupModal");
+    const fenInput = document.getElementById("fenInput") as HTMLInputElement | null;
+    const startTypeSelect = document.getElementById("startTypeSelect") as HTMLSelectElement | null;
+    const colorSelect = document.getElementById("colorSelect") as HTMLSelectElement | null;
+    const startGameBtn = document.getElementById("startGameBtn") as HTMLButtonElement | null;
+    const cancelSetupBtn = document.getElementById("cancelSetupBtn") as HTMLButtonElement | null;
+    const fenError = document.getElementById("fenError");
+    if (!modal || !fenInput || !startTypeSelect || !colorSelect || !startGameBtn || !cancelSetupBtn || !fenError) {
+        throw new Error("Setup modal initialization failed: One or more required DOM elements are missing.");
+    }
+    return { modal, fenInput, startTypeSelect, colorSelect, startGameBtn, cancelSetupBtn, fenError };
+}
 
-    if (!modal || !fenInput || !startTypeSelect || !colorSelect || !startGameBtn || !cancelSetupBtn || !fenError) return;
+function showSetupModal(opponent: string): void {
+    const { modal, fenInput, startTypeSelect, colorSelect, startGameBtn, cancelSetupBtn, fenError } = getSetupModalElements();
 
     modal.style.display = "block";
     fenInput.style.display = "none";

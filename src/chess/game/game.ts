@@ -293,7 +293,7 @@ export class Game implements GameState {
 
     private hasInsufficientMaterial(): boolean {
         const pieces: Piece[] = this._board.getAllPieces().filter(p => p.isActive());
-        if (pieces.length === 2) return true; // Only kings
+        if (pieces.length === 2) return true;
 
         if (pieces.length === 3) {
             const nonKings: Piece[] = pieces.filter(p => p.type !== PieceType.King);

@@ -4,6 +4,9 @@ import { RandyBot } from "./bots/randy.js";
 import { StockfishBot } from "./bots/stockfish.js";
 
 export class PlayerFactory {
+
+    private constructor() { }
+
     public static createHumanPlayer(name: string, color: Color) {
         return new HumanPlayer(name, color);
     }
