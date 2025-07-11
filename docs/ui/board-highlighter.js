@@ -1,8 +1,10 @@
 import { FILES } from "../chess/constants/board.js";
-import { MoveValidator } from "../chess/rules/move-validator.js";
+import { Variant } from "../types/variant.js";
 export class BoardHighlighter {
-    constructor(ui) {
+    constructor(ui, moveValidator, variant) {
         this._ui = ui;
+        this._moveValidator = moveValidator;
+        this._variant = variant;
     }
     resetAllHiglights() {
         this._ui.resetHighlights();
@@ -15,9 +17,10 @@ export class BoardHighlighter {
                 from,
                 to: movePos,
                 piece: piece.type,
-                color: piece.color
+                color: piece.color,
+                castling: false
             };
-            if (!MoveValidator.validateMove(game, move))
+            if (!this._moveValidator.validateMove(game, move))
                 continue;
             const targetFile = FILES[movePos.x];
             const targetRank = movePos.y + 1;
@@ -32,28 +35,20 @@ export class BoardHighlighter {
         this.higlightLegalCastlingMoves(game, piece, from);
     }
     higlightLegalCastlingMoves(game, piece, from) {
-        if (piece.type === "king") {
-            const castlingTargets = [];
-            if (piece.color === "white" && from.x === 4 && from.y === 0) {
-                castlingTargets.push({ x: 6, y: 0 });
-                castlingTargets.push({ x: 2, y: 0 });
-            }
-            if (piece.color === "black" && from.x === 4 && from.y === 7) {
-                castlingTargets.push({ x: 6, y: 7 });
-                castlingTargets.push({ x: 2, y: 7 });
-            }
-            for (const castlePos of castlingTargets) {
-                const move = {
-                    from,
-                    to: castlePos,
-                    piece: piece.type,
-                    color: piece.color
-                };
-                if (MoveValidator.validateMove(game, move)) {
-                    const targetFile = FILES[castlePos.x];
-                    const targetRank = castlePos.y + 1;
-                    this._ui.highlightSquare(`${targetFile}${targetRank}`);
-                }
+        if (piece.type !== "king")
+            return;
+        const y = from.y;
+        const castlingTargets = this.getCastlingTargets(game, piece, y);
+        for (const { to, rook, right } of castlingTargets) {
+            const move = {
+                from,
+                to,
+                piece: piece.type,
+                color: piece.color,
+                castling: true
+            };
+            if (right && this._moveValidator.validateMove(game, move)) {
+                this.highlightCastlingSquares(to, rook);
             }
         }
     }
@@ -79,5 +74,43 @@ export class BoardHighlighter {
         else {
             this._ui.resetLastMoveHighlights();
         }
+    }
+    getCastlingTargets(game, piece, y) {
+        const kingsideRookX = game.rookStartKingsideX;
+        const kingsideRookPos = { x: kingsideRookX, y };
+        const kingsideCastleTo = { x: 6, y };
+        const kingsideRight = piece.color === "white"
+            ? game.castlingRights.whiteKingSide
+            : game.castlingRights.blackKingSide;
+        const queensideRookX = game.rookStartQueensideX;
+        const queensideRookPos = { x: queensideRookX, y };
+        const queensideCastleTo = { x: 2, y };
+        const queensideRight = piece.color === "white"
+            ? game.castlingRights.whiteQueenSide
+            : game.castlingRights.blackQueenSide;
+        return [
+            {
+                to: kingsideCastleTo,
+                rook: kingsideRookPos,
+                right: kingsideRight,
+                side: "kingside"
+            },
+            {
+                to: queensideCastleTo,
+                rook: queensideRookPos,
+                right: queensideRight,
+                side: "queenside"
+            }
+        ];
+    }
+    highlightCastlingSquares(to, rook) {
+        if (this._variant === Variant.Standard) {
+            const targetFile = FILES[to.x];
+            const targetRank = to.y + 1;
+            this._ui.highlightSquare(`${targetFile}${targetRank}`);
+        }
+        const rookFile = FILES[rook.x];
+        const rookRank = rook.y + 1;
+        this._ui.highlightSquare(`${rookFile}${rookRank}`, "targethighlighted");
     }
 }

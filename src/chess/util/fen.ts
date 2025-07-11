@@ -9,6 +9,9 @@ import { Board } from "../board/board.js";
 import { CastlingRights } from "../types/castling-rights.js";
 import { GameState } from "../types/game-state.js";
 import { Game } from "../game/game.js";
+import { BaseMoveValidator } from "../rules/base-move-validator.js";
+import { KingAndRookStartIndexes } from "../types/starting-indexes.js";
+import { Variant } from "../../types/variant.js";
 
 export class FEN {
 
@@ -66,11 +69,11 @@ export class FEN {
         game.fullmoveNumber = parseInt(fullmove, 10);
     }
 
-    public static gameFromFEN(fen: string): Game {
+    public static gameFromFEN(fen: string, variant?: Variant): Game {
         const [boardPart, activeColor, castling, enPassant, halfmove, fullmove]: string[] = fen.split(" ");
         const board: Board = new Board();
         FEN.parseBoardFromFEN(board, boardPart);
-        const game: Game = new Game(board);
+        const game: Game = new Game(new BaseMoveValidator(), variant ?? Variant.Standard, board, fen);
         game.activeColor = activeColor === "w" ? Color.White : Color.Black;
         game.castlingRights = FEN.castlingStringToObject(castling);
         game.enPassantTarget = enPassant !== "-" ? FEN.parsePosition(enPassant) : null;
@@ -146,6 +149,16 @@ export class FEN {
         return fen;
     }
 
+    public static serializeBoardAndStartingStateToFEN(board: Board): string {
+        const boardPart: string = FEN.serializeBoardToFEN(board);
+        const activeColor: string = "w";
+        const castling: string = "KQkq";
+        const enPassant: string = "-";
+        const halfmove: string = "0";
+        const fullmove: string = "1";
+        return [boardPart, activeColor, castling, enPassant, halfmove, fullmove].join(" ");
+    }
+
     public static parseGameStateFromFEN(game: GameState, fen: string): void {
         const [, activeColor, castling, enPassant, halfmove, fullmove]: string[] = fen.split(" ");
         game.activeColor = activeColor === "w" ? Color.White : Color.Black;
@@ -200,5 +213,33 @@ export class FEN {
         const castling: string = FEN.castlingObjectToString(game.castlingRights);
         const enPassant: string = game.enPassantTarget ? FEN.positionToString(game.enPassantTarget) : "-";
         return [boardPart, activeColor, castling, enPassant].join(" ");
+    }
+
+    public static expandRank(rank: string): string[] {
+        const expanded: string[] = [];
+        for (const char of rank) {
+            if (/\d/.test(char)) {
+                for (let i = 0; i < parseInt(char, 10); i++) expanded.push("");
+            } else {
+                expanded.push(char);
+            }
+        }
+        return expanded;
+    }
+
+    public static getKingAndRookStartIndexesFromFEN(fen: string): KingAndRookStartIndexes {
+        const ranks: string[] = fen.split(" ")[0].split("/");
+        const backRank: string = ranks[0];
+        const expanded: string[] = FEN.expandRank(backRank);
+        const kingX: number = expanded.findIndex(p => p === "K" || p === "k");
+        const rookIndices: number[] = expanded
+            .map((p, i) => ({ p, i }))
+            .filter(obj => obj.p === "R" || obj.p === "r")
+            .map(obj => obj.i);
+        return {
+            kingX,
+            rookQueensideX: rookIndices[0],
+            rookKingsideX: rookIndices[1]
+        };
     }
 }

@@ -1,4 +1,3 @@
-import { MoveValidator } from "../rules/move-validator.js";
 export function getRandomLegalMove(game) {
     const moves = [];
     for (const piece of game.board.getPiecesByColor(game.activeColor)) {
@@ -9,9 +8,10 @@ export function getRandomLegalMove(game) {
                 from: piece.position,
                 to: pos,
                 piece: piece.type,
-                color: piece.color
+                color: piece.color,
+                castling: false
             };
-            if (MoveValidator.validateMove(game, move)) {
+            if (game.moveValidator.validateMove(game, move)) {
                 moves.push(move);
             }
         }

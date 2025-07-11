@@ -1,5 +1,4 @@
 import { FILES, RANKS } from "../chess/constants/board.js";
-import { GameFactory } from "../chess/game/game-factory.js";
 import { Game } from "../chess/game/game.js";
 import { Piece } from "../chess/pieces/piece.js";
 import { Color } from "../chess/types/color.js";
@@ -19,6 +18,9 @@ import { BoardHighlighter } from "../ui/board-highlighter.js";
 import { HistoryManager } from "../history/history-manager.js";
 import { GameControlManager } from "../ui/game-control-manager.js";
 import { GameStatus } from "../chess/types/game-status.js";
+import { MoveValidator } from "../chess/rules/move-validator-interface.js";
+import { CastlingRights } from "../chess/types/castling-rights.js";
+import { Variant } from "../types/variant.js";
 
 export class GameController {
 
@@ -44,11 +46,16 @@ export class GameController {
     // Initialisation
 
 
-    public constructor(localPlayer: Player, remotePlayer: Player, game?: Game) {
+    public constructor(
+        localPlayer: Player,
+        remotePlayer: Player,
+        moveValidator: MoveValidator,
+        game: Game,
+    ) {
         this._localPlayer = localPlayer;
         this._remotePlayer = remotePlayer;
-        this._boardHighLighter = new BoardHighlighter(this._ui);
-        this._game = game ?? GameFactory.fromStartingPosition();
+        this._boardHighLighter = new BoardHighlighter(this._ui, moveValidator, game.variant);
+        this._game = game;
     }
 
     public async init(): Promise<void> {
@@ -151,7 +158,7 @@ export class GameController {
             this._selectedSquare = null;
         }
 
-        if (this.isSelectingOwnPieceAgain(fromPiece, toPiece)) {
+        if (this.isSelectingOwnPieceAgain(fromPiece, toPiece) && !this.isSelectingRookForCastle(fromPiece, toPiece)) {
             this.selectNewPiece(toPiece!, to);
             return;
         }
@@ -241,6 +248,7 @@ export class GameController {
             localColor: this._localPlayer.color,
             botType: this._remotePlayer.name,
             botColor: this._remotePlayer.color,
+            variant: this._game.variant,
         };
         localStorage.setItem("cesariChessSave", JSON.stringify(saveData));
     }
@@ -327,6 +335,33 @@ export class GameController {
     // Helpers
 
 
+    private isSelectingRookForCastle(fromPiece: Piece | null, toPiece: Piece | null): boolean {
+        if (
+            fromPiece &&
+            toPiece &&
+            fromPiece.type === "king" &&
+            toPiece.type === "rook" &&
+            fromPiece.color === toPiece.color &&
+            fromPiece.color === this._game.activeColor &&
+            !toPiece.state.hasMoved &&
+            !fromPiece.state.hasMoved
+        ) {
+            const color: Color = fromPiece.color;
+            const rookX: number = toPiece.position.x;
+            const isKingside: boolean = rookX > fromPiece.position.x;
+            const rights: CastlingRights = this._game.castlingRights;
+
+            if (color === Color.White) {
+                if (isKingside && rights.whiteKingSide) return true;
+                if (!isKingside && rights.whiteQueenSide) return true;
+            } else {
+                if (isKingside && rights.blackKingSide) return true;
+                if (!isKingside && rights.blackQueenSide) return true;
+            }
+        }
+        return false;
+    }
+
     private setBoardFlipped(flipped: boolean): void {
         this._isBoardFlipped = flipped;
         const boardContainer: HTMLElement | null = document.getElementById("chessBoardContainer");
@@ -370,13 +405,45 @@ export class GameController {
     private buildMoveObject(fromPiece: Piece, from: Position, to: Position): Move {
         const color: Color = fromPiece.color;
         let promotion: PromotionPieceType | undefined = undefined;
+
+        if (
+            fromPiece.type === "king" &&
+            this._game.board.getPieceAt(to)?.type === "rook" &&
+            this.isSelectingRookForCastle(fromPiece, this._game.board.getPieceAt(to))
+        ) {
+            const isKingside: boolean = to.x > from.x;
+            const kingDestX: number = isKingside ? 6 : 2;
+            const kingDest: Position = { x: kingDestX, y: from.y };
+            return {
+                from,
+                to: kingDest,
+                piece: fromPiece.type,
+                color,
+                castling: true
+            };
+        }
+
+        if (
+            fromPiece.type === "king" &&
+            Math.abs(from.x - to.x) > 1 &&
+            this._game.variant === Variant.Standard
+        ) {
+            return {
+                from,
+                to,
+                piece: fromPiece.type,
+                color,
+                castling: true
+            };
+        }
+
         if (
             fromPiece.type === "pawn" &&
             ((color === "white" && to.y === 7) || (color === "black" && to.y === 0))
         ) {
             promotion = this.getPromotionChoice();
         }
-        return { from, to, piece: fromPiece.type, color, ...(promotion ? { promotion } : {}) };
+        return { from, to, piece: fromPiece.type, color, ...(promotion ? { promotion } : {}), castling: false };
     }
 
     private enableBoard(): void {

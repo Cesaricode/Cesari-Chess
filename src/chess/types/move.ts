@@ -8,6 +8,7 @@ export interface Move {
     to: Position;
     piece: PieceType;
     color: Color;
+    castling: boolean;
     capturedPiece?: PieceType;
     promotion?: PromotionPieceType;
 }

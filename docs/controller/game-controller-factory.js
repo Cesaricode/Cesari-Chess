@@ -12,10 +12,13 @@ import { GameFactory } from "../chess/game/game-factory.js";
 import { Color } from "../chess/types/color.js";
 import { PlayerFactory } from "../player/player-factory.js";
 import { FEN } from "../chess/util/fen.js";
+import { BaseMoveValidator } from "../chess/rules/base-move-validator.js";
+import { Variant } from "../types/variant.js";
+import { FischerandomMoveValidator } from "../chess/rules/fischerandom-move-validator.js";
 export class GameControllerFactory {
     constructor() { }
     // Standard games
-    static createLocalVsBot(bot, color) {
+    static createLocalVsBot(variant, bot, color) {
         return __awaiter(this, void 0, void 0, function* () {
             const localColor = color !== null && color !== void 0 ? color : Color.White;
             const botColor = localColor === Color.White ? Color.Black : Color.White;
@@ -23,23 +26,31 @@ export class GameControllerFactory {
                 throw new Error(`Bot color mismatch: expected ${botColor}, got ${bot.color}`);
             }
             const localPlayer = PlayerFactory.createHumanPlayer("You", localColor);
-            const controller = new GameController(localPlayer, bot);
+            const moveValidator = variant === Variant.Fischerandom
+                ? new FischerandomMoveValidator()
+                : new BaseMoveValidator();
+            const game = GameFactory.fromStartingPosition(moveValidator, variant);
+            const controller = new GameController(localPlayer, bot, moveValidator, game);
             yield controller.init();
             return controller;
         });
     }
-    static createLocalVsLocal(color) {
+    static createLocalVsLocal(variant, color) {
         return __awaiter(this, void 0, void 0, function* () {
             const player1Color = color !== null && color !== void 0 ? color : Color.White;
             const player2Color = player1Color === Color.White ? Color.Black : Color.White;
             const player1 = PlayerFactory.createHumanPlayer("Player 1", player1Color);
             const player2 = PlayerFactory.createHumanPlayer("Player 2", player2Color);
-            const controller = new GameController(player1, player2);
+            const moveValidator = variant === Variant.Fischerandom
+                ? new FischerandomMoveValidator()
+                : new BaseMoveValidator();
+            const game = GameFactory.fromStartingPosition(moveValidator, variant);
+            const controller = new GameController(player1, player2, moveValidator, game);
             yield controller.init();
             return controller;
         });
     }
-    static createLocalVsRemote(remotePlayer, color) {
+    static createLocalVsRemote(variant, remotePlayer, color) {
         return __awaiter(this, void 0, void 0, function* () {
             const localColor = color !== null && color !== void 0 ? color : Color.White;
             const remoteColor = localColor === Color.White ? Color.Black : Color.White;
@@ -47,13 +58,17 @@ export class GameControllerFactory {
                 throw new Error(`Bot color mismatch: expected ${remoteColor}, got ${remotePlayer.color}`);
             }
             const localPlayer = PlayerFactory.createHumanPlayer("You", localColor);
-            const controller = new GameController(localPlayer, remotePlayer);
+            const moveValidator = variant === Variant.Fischerandom
+                ? new FischerandomMoveValidator()
+                : new BaseMoveValidator();
+            const game = GameFactory.fromStartingPosition(moveValidator, variant);
+            const controller = new GameController(localPlayer, remotePlayer, moveValidator, game);
             yield controller.init();
             return controller;
         });
     }
     // Games from FEN
-    static createLocalVsBotFromFEN(bot, fen, color) {
+    static createLocalVsBotFromFEN(variant, bot, fen, color) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!FEN.isValidFEN(fen))
                 throw new Error("Error creating gamecontroller: Invalid FEN string");
@@ -63,12 +78,16 @@ export class GameControllerFactory {
                 throw new Error(`Bot color mismatch: expected ${botColor}, got ${bot.color}`);
             }
             const localPlayer = PlayerFactory.createHumanPlayer("You", localColor);
-            const controller = new GameController(localPlayer, bot, GameFactory.fromFEN(fen));
+            const moveValidator = variant === Variant.Fischerandom
+                ? new FischerandomMoveValidator()
+                : new BaseMoveValidator();
+            const game = GameFactory.fromFEN(fen, moveValidator, variant);
+            const controller = new GameController(localPlayer, bot, moveValidator, game);
             yield controller.init();
             return controller;
         });
     }
-    static createLocalVsLocalFromFEN(fen, color) {
+    static createLocalVsLocalFromFEN(variant, fen, color) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!FEN.isValidFEN(fen))
                 throw new Error("Error creating gamecontroller: Invalid FEN string");
@@ -76,12 +95,16 @@ export class GameControllerFactory {
             const player2Color = player1Color === Color.White ? Color.Black : Color.White;
             const player1 = PlayerFactory.createHumanPlayer("Player 1", player1Color);
             const player2 = PlayerFactory.createHumanPlayer("Player 2", player2Color);
-            const controller = new GameController(player1, player2, GameFactory.fromFEN(fen));
+            const moveValidator = variant === Variant.Fischerandom
+                ? new FischerandomMoveValidator()
+                : new BaseMoveValidator();
+            const game = GameFactory.fromFEN(fen, moveValidator, variant);
+            const controller = new GameController(player1, player2, moveValidator, game);
             yield controller.init();
             return controller;
         });
     }
-    static createLocalVsRemoteFromFEN(remotePlayer, fen, color) {
+    static createLocalVsRemoteFromFEN(variant, remotePlayer, fen, color) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!FEN.isValidFEN(fen))
                 throw new Error("Error creating gamecontroller: Invalid FEN string");
@@ -91,7 +114,11 @@ export class GameControllerFactory {
                 throw new Error(`Bot color mismatch: expected ${remoteColor}, got ${remotePlayer.color}`);
             }
             const localPlayer = PlayerFactory.createHumanPlayer("You", localColor);
-            const controller = new GameController(localPlayer, remotePlayer, GameFactory.fromFEN(fen));
+            const moveValidator = variant === Variant.Fischerandom
+                ? new FischerandomMoveValidator()
+                : new BaseMoveValidator();
+            const game = GameFactory.fromFEN(fen, moveValidator, variant);
+            const controller = new GameController(localPlayer, remotePlayer, moveValidator, game);
             yield controller.init();
             return controller;
         });
@@ -106,11 +133,14 @@ export class GameControllerFactory {
                 const saveData = JSON.parse(data);
                 if (!FEN.isValidFEN(saveData.fen))
                     throw new Error("Error creating gamecontroller from gamesave: Invalid FEN string");
-                const game = GameFactory.fromFEN(saveData.fen);
+                const moveValidator = saveData.variant === Variant.Fischerandom
+                    ? new FischerandomMoveValidator()
+                    : new BaseMoveValidator();
+                const game = GameFactory.fromFEN(saveData.fen, moveValidator, saveData.variant);
                 game.moveHistory = saveData.moveHistory;
                 game.initialFEN = saveData.initialFen;
                 const undoStack = [];
-                let replayGame = GameFactory.fromFEN(saveData.initialFen);
+                let replayGame = GameFactory.fromFEN(saveData.initialFen, moveValidator, saveData.variant);
                 for (const move of saveData.moveHistory) {
                     undoStack.push(replayGame.clone());
                     replayGame.makeMove(move);
@@ -126,7 +156,7 @@ export class GameControllerFactory {
                 else {
                     bot = PlayerFactory.createRandyBot(saveData.botColor);
                 }
-                const controller = new GameController(localPlayer, bot, game);
+                const controller = new GameController(localPlayer, bot, moveValidator, game);
                 controller.historyManager.setUndoStack(undoStack);
                 controller.updateControlButtons();
                 yield controller.init();

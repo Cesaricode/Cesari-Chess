@@ -11,36 +11,40 @@ import { Move } from "../types/move.js";
 import { PieceMoveValidator } from "../types/piece-move-validator.js";
 import { PieceType } from "../types/piece-type.js";
 import { Position } from "../types/position.js";
+import { MoveValidator } from "./move-validator-interface.js";
 
-export class MoveValidator implements MoveValidator {
+export class BaseMoveValidator implements MoveValidator {
 
-    private constructor() { }
+    private validators: Record<PieceType, PieceMoveValidator>;
 
-    private static validators: Record<PieceType, PieceMoveValidator> = {
-        pawn: MoveValidator.validatePawnMove,
-        knight: MoveValidator.validateKnightMove,
-        bishop: MoveValidator.validateBishopMove,
-        rook: MoveValidator.validateRookMove,
-        queen: MoveValidator.validateQueenMove,
-        king: MoveValidator.validateKingMove,
-    };
+    public constructor() {
+        this.validators = {
+            pawn: this.validatePawnMove.bind(this),
+            knight: this.validateKnightMove.bind(this),
+            bishop: this.validateBishopMove.bind(this),
+            rook: this.validateRookMove.bind(this),
+            queen: this.validateQueenMove.bind(this),
+            king: this.validateKingMove.bind(this),
+        };
+    }
 
-    public static validateMove(game: Game, move: Move): boolean {
-        const validator: PieceMoveValidator | undefined = MoveValidator.validators[move.piece];
+    public validateMove(game: Game, move: Move): boolean {
+        const validator: PieceMoveValidator | undefined = this.validators[move.piece];
         if (!validator) {
             throw new Error(`Can not validate move. Unknown piece type: ${move.piece}`);
         }
-        return (validator(game, move) && !MoveValidator.leavesKingInCheck(game, move));
+        return (validator(game, move) && !this.leavesKingInCheck(game, move));
     }
 
-    public static isSquareAttacked(game: Game, pos: Position, byColor: Color): boolean {
+    public isSquareAttacked(game: Game, pos: Position, byColor: Color): boolean {
         for (const piece of game.board.getPiecesByColor(byColor)) {
             if (!piece.isActive()) continue;
             const move: Move = {
                 from: piece.position,
                 to: pos,
                 piece: piece.type,
-                color: byColor
+                color: byColor,
+                castling: false
             };
 
             if (piece.type === PieceType.King) {
@@ -50,7 +54,7 @@ export class MoveValidator implements MoveValidator {
                     return true;
                 }
             } else {
-                const validator: PieceMoveValidator = MoveValidator.validators[piece.type];
+                const validator: PieceMoveValidator = this.validators[piece.type];
                 if (validator && validator(game, move)) {
                     return true;
                 }
@@ -60,14 +64,14 @@ export class MoveValidator implements MoveValidator {
         return false;
     }
 
-    private static validatePawnMove(game: Game, move: Move): boolean {
+    private validatePawnMove(game: Game, move: Move): boolean {
         const pawn: Pawn | null = game.board.getPieceAt(move.from) as Pawn | null;
-        if (!MoveValidator.assertValidPiece<Pawn>(pawn, PieceType.Pawn, move.color)) {
+        if (!this.assertValidPiece<Pawn>(pawn, PieceType.Pawn, move.color)) {
             return false;
         }
 
         const target: Piece | null = game.board.getPieceAt(move.to);
-        if (!MoveValidator.assertTargetColor(target, move.color)) {
+        if (!this.assertTargetColor(target, move.color)) {
             return false;
         }
 
@@ -102,20 +106,20 @@ export class MoveValidator implements MoveValidator {
             dy === 2 * direction &&
             !target
         ) {
-            return MoveValidator.isPathClear(game, move);
+            return this.isPathClear(game, move);
         }
 
         return false;
     }
 
-    private static validateKnightMove(game: Game, move: Move): boolean {
+    private validateKnightMove(game: Game, move: Move): boolean {
         const knight: Knight | null = game.board.getPieceAt(move.from) as Knight | null;
-        if (!MoveValidator.assertValidPiece<Knight>(knight, PieceType.Knight, move.color)) {
+        if (!this.assertValidPiece<Knight>(knight, PieceType.Knight, move.color)) {
             return false;
         }
 
         const target: Piece | null = game.board.getPieceAt(move.to);
-        if (!MoveValidator.assertTargetColor(target, move.color)) {
+        if (!this.assertTargetColor(target, move.color)) {
             return false;
         }
 
@@ -128,14 +132,14 @@ export class MoveValidator implements MoveValidator {
         return true;
     }
 
-    private static validateBishopMove(game: Game, move: Move): boolean {
+    private validateBishopMove(game: Game, move: Move): boolean {
         const bishop: Bishop | null = game.board.getPieceAt(move.from) as Bishop | null;
-        if (!MoveValidator.assertValidPiece<Bishop>(bishop, PieceType.Bishop, move.color)) {
+        if (!this.assertValidPiece<Bishop>(bishop, PieceType.Bishop, move.color)) {
             return false;
         }
 
         const target: Piece | null = game.board.getPieceAt(move.to);
-        if (!MoveValidator.assertTargetColor(target, move.color)) {
+        if (!this.assertTargetColor(target, move.color)) {
             return false;
         }
 
@@ -145,21 +149,21 @@ export class MoveValidator implements MoveValidator {
             return false;
         }
 
-        if (!MoveValidator.isPathClear(game, move)) {
+        if (!this.isPathClear(game, move)) {
             return false;
         }
 
         return true;
     }
 
-    private static validateRookMove(game: Game, move: Move): boolean {
+    private validateRookMove(game: Game, move: Move): boolean {
         const rook: Rook | null = game.board.getPieceAt(move.from) as Rook | null;
-        if (!MoveValidator.assertValidPiece<Rook>(rook, PieceType.Rook, move.color)) {
+        if (!this.assertValidPiece<Rook>(rook, PieceType.Rook, move.color)) {
             return false;
         }
 
         const target: Piece | null = game.board.getPieceAt(move.to);
-        if (!MoveValidator.assertTargetColor(target, move.color)) {
+        if (!this.assertTargetColor(target, move.color)) {
             return false;
         }
 
@@ -169,21 +173,21 @@ export class MoveValidator implements MoveValidator {
             return false;
         }
 
-        if (!MoveValidator.isPathClear(game, move)) {
+        if (!this.isPathClear(game, move)) {
             return false;
         }
 
         return true;
     }
 
-    private static validateQueenMove(game: Game, move: Move): boolean {
+    private validateQueenMove(game: Game, move: Move): boolean {
         const queen: Queen | null = game.board.getPieceAt(move.from) as Queen | null;
-        if (!MoveValidator.assertValidPiece<Queen>(queen, PieceType.Queen, move.color)) {
+        if (!this.assertValidPiece<Queen>(queen, PieceType.Queen, move.color)) {
             return false;
         }
 
         const target: Piece | null = game.board.getPieceAt(move.to);
-        if (!MoveValidator.assertTargetColor(target, move.color)) {
+        if (!this.assertTargetColor(target, move.color)) {
             return false;
         }
 
@@ -193,26 +197,27 @@ export class MoveValidator implements MoveValidator {
             return false;
         }
 
-        if (!MoveValidator.isPathClear(game, move)) {
+        if (!this.isPathClear(game, move)) {
             return false;
         }
 
         return true;
     }
 
-    private static validateKingMove(game: Game, move: Move): boolean {
+    protected validateKingMove(game: Game, move: Move): boolean {
         const king: King | null = game.board.getPieceAt(move.from) as King | null;
-        if (!MoveValidator.assertValidPiece<King>(king, PieceType.King, move.color)) {
+        if (!this.assertValidPiece<King>(king, PieceType.King, move.color)) {
             return false;
         }
 
         const target: Piece | null = game.board.getPieceAt(move.to);
-        if (!MoveValidator.assertTargetColor(target, move.color)) {
-            return false;
+
+        if (move.castling) {
+            return this.validateCastleMove(game, move);
         }
 
-        if (Math.abs(move.from.x - move.to.x) === 2) {
-            return MoveValidator.validateCastleMove(game, move);
+        if (!this.assertTargetColor(target, move.color)) {
+            return false;
         }
 
         const pseudoLegalMoves: Position[] = king.getPseudoLegalMoves();
@@ -224,7 +229,8 @@ export class MoveValidator implements MoveValidator {
         return true;
     }
 
-    private static validateCastleMove(game: Game, move: Move): boolean {
+    protected validateCastleMove(game: Game, move: Move): boolean {
+        if (move.castling !== true) return false;
         if (game.isKingInCheck(move.color)) return false;
         const isKingSide: boolean = move.to.x > move.from.x;
         const y: number = move.from.y;
@@ -239,21 +245,21 @@ export class MoveValidator implements MoveValidator {
 
         const rookX: 0 | 7 = isKingSide ? 7 : 0;
         const rook: Rook | null = game.board.getPieceAt({ x: rookX, y }) as Rook | null;
-        if (!MoveValidator.assertValidPiece<Rook>(rook, PieceType.Rook, move.color)) return false;
+        if (!this.assertValidPiece<Rook>(rook, PieceType.Rook, move.color)) return false;
 
         const step: -1 | 1 = isKingSide ? 1 : -1;
         for (let x = move.from.x + step; x !== rookX; x += step) {
             if (game.board.getPieceAt({ x, y })) return false;
         }
 
-        if (!MoveValidator.isPathSafe(game, { from: move.from, to: move.to, piece: PieceType.King, color: move.color })) return false;
+        if (!this.isPathSafe(game, { from: move.from, to: move.to, piece: PieceType.King, color: move.color, castling: false })) return false;
 
         if (game.board.getPieceAt(move.to)) return false;
 
         return true;
     }
 
-    private static assertValidPiece<T extends Piece>(
+    protected assertValidPiece<T extends Piece>(
         piece: Piece | null,
         expectedType: PieceType,
         expectedColor: Color
@@ -264,11 +270,11 @@ export class MoveValidator implements MoveValidator {
             piece.isActive();
     }
 
-    private static assertTargetColor(target: Piece | null, movingColor: Color): boolean {
+    protected assertTargetColor(target: Piece | null, movingColor: Color): boolean {
         return !target || target.color !== movingColor;
     }
 
-    private static leavesKingInCheck(game: Game, move: Move): boolean {
+    private leavesKingInCheck(game: Game, move: Move): boolean {
 
         const simulated: Game = game.simulateMove(move);
         const king: King | undefined = simulated.board.getPiecesByColor(move.color).find(p => p.type === PieceType.King) as King | undefined;
@@ -277,10 +283,10 @@ export class MoveValidator implements MoveValidator {
         }
 
         const opponentColor: Color = move.color === Color.White ? Color.Black : Color.White;
-        return MoveValidator.isSquareAttacked(simulated, king.position, opponentColor);
+        return this.isSquareAttacked(simulated, king.position, opponentColor);
     }
 
-    private static isPathClear(game: Game, move: Move): boolean {
+    protected isPathClear(game: Game, move: Move): boolean {
         const { from, to } = move;
         const dx: number = Math.sign(to.x - from.x);
         const dy: number = Math.sign(to.y - from.y);
@@ -299,7 +305,7 @@ export class MoveValidator implements MoveValidator {
         return true;
     }
 
-    private static isPathSafe(game: Game, move: Move): boolean {
+    protected isPathSafe(game: Game, move: Move): boolean {
         const path: Position[] = [];
         const dx: number = Math.sign(move.to.x - move.from.x);
         const dy: number = Math.sign(move.to.y - move.from.y);
@@ -315,7 +321,7 @@ export class MoveValidator implements MoveValidator {
 
         const opponentColor: Color = move.color === Color.White ? Color.Black : Color.White;
         for (const pos of path) {
-            if (MoveValidator.isSquareAttacked(game, pos, opponentColor)) {
+            if (this.isSquareAttacked(game, pos, opponentColor)) {
                 return false;
             }
         }

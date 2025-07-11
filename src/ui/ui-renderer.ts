@@ -130,7 +130,7 @@ export class UiRenderer {
         grid.innerHTML = "";
 
         const paddingCount: number = this.getHistoryMovePadding(game);
-        let simulatedGame: Game = GameFactory.fromFEN(game.initialFEN);
+        let simulatedGame: Game = GameFactory.fromFEN(game.initialFEN, game.moveValidator, game.variant);
 
         const fenParts: string[] = game.initialFEN.split(" ");
         const startingColor: string = fenParts[1];

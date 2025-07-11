@@ -1,8 +1,7 @@
 import { PieceType } from "../types/piece-type.js";
 import { FILES } from "../constants/board.js";
-import { MoveValidator } from "../rules/move-validator.js";
 export function moveToSAN(game, move) {
-    if (move.piece === PieceType.King && Math.abs(move.from.x - move.to.x) === 2) {
+    if (move.piece === PieceType.King && move.castling === true) {
         return move.to.x === 6 ? "O-O" : "O-O-O";
     }
     const pieceLetter = move.piece === PieceType.Pawn ? "" : pieceTypeToLetter(move.piece);
@@ -46,11 +45,12 @@ function needsDisambiguation(game, move) {
     const candidates = game.board.getPiecesByColor(color)
         .filter(p => p.type === move.piece &&
         p !== movingPiece &&
-        MoveValidator.validateMove(game, {
+        game.moveValidator.validateMove(game, {
             from: p.position,
             to: move.to,
             piece: p.type,
-            color: color
+            color: color,
+            castling: false
         }));
     return candidates.length > 0;
 }
@@ -62,11 +62,12 @@ function getDisambiguation(game, move) {
     const candidates = game.board.getPiecesByColor(color)
         .filter(p => p.type === move.piece &&
         p !== movingPiece &&
-        MoveValidator.validateMove(game, {
+        game.moveValidator.validateMove(game, {
             from: p.position,
             to: move.to,
             piece: p.type,
-            color: color
+            color: color,
+            castling: false
         }));
     if (candidates.length === 0)
         return "";

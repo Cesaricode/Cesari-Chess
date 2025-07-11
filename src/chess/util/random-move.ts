@@ -1,6 +1,5 @@
 import { Game } from "../game/game.js";
 import { Move } from "../types/move.js";
-import { MoveValidator } from "../rules/move-validator.js";
 
 export function getRandomLegalMove(game: Game): Move {
     const moves: Move[] = [];
@@ -11,9 +10,10 @@ export function getRandomLegalMove(game: Game): Move {
                 from: piece.position,
                 to: pos,
                 piece: piece.type,
-                color: piece.color
+                color: piece.color,
+                castling: false
             };
-            if (MoveValidator.validateMove(game, move)) {
+            if (game.moveValidator.validateMove(game, move)) {
                 moves.push(move);
             }
         }

@@ -8,11 +8,15 @@ export function parseUciMoveToMoveObject(uci, game) {
     const piece = game.board.getPieceAt(from);
     if (!piece)
         throw new Error(`No piece at ${uci.slice(0, 2)}`);
+    const castling = piece.type === "king" &&
+        (to.x === 6 || to.x === 2) &&
+        (from.y === 0 || from.y === 7);
     const move = {
         from,
         to,
         piece: piece.type,
-        color: piece.color
+        color: piece.color,
+        castling
     };
     if (uci.length === 5) {
         const promoChar = uci[4].toLowerCase();

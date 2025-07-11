@@ -2,12 +2,11 @@ import { Game } from "../game/game.js";
 import { Move } from "../types/move.js";
 import { PieceType } from "../types/piece-type.js";
 import { FILES } from "../constants/board.js";
-import { MoveValidator } from "../rules/move-validator.js";
 import { Piece } from "../pieces/piece.js";
 import { Color } from "../types/color.js";
 
 export function moveToSAN(game: Game, move: Move): string {
-    if (move.piece === PieceType.King && Math.abs(move.from.x - move.to.x) === 2) {
+    if (move.piece === PieceType.King && move.castling === true) {
         return move.to.x === 6 ? "O-O" : "O-O-O";
     }
 
@@ -60,11 +59,12 @@ function needsDisambiguation(game: Game, move: Move): boolean {
         .filter(p =>
             p.type === move.piece &&
             p !== movingPiece &&
-            MoveValidator.validateMove(game, {
+            game.moveValidator.validateMove(game, {
                 from: p.position,
                 to: move.to,
                 piece: p.type,
-                color: color
+                color: color,
+                castling: false
             })
         );
     return candidates.length > 0;
@@ -79,11 +79,12 @@ function getDisambiguation(game: Game, move: Move): string {
         .filter(p =>
             p.type === move.piece &&
             p !== movingPiece &&
-            MoveValidator.validateMove(game, {
+            game.moveValidator.validateMove(game, {
                 from: p.position,
                 to: move.to,
                 piece: p.type,
-                color: color
+                color: color,
+                castling: false
             })
         );
 

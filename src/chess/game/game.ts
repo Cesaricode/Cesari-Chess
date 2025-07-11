@@ -1,10 +1,10 @@
+import { Variant } from "../../types/variant.js";
 import { Board } from "../board/board.js";
 import { ChessClock } from "../clock/clock.js";
-import { STARTING_FEN } from "../constants/fen.js";
 import { FIFTY_MOVE_RULE_LIMIT, FIVEFOLD_REPETITION_COUNT, SEVENTYFIVE_MOVE_RULE_LIMIT, THREEFOLD_REPETITION_COUNT } from "../constants/game.js";
 import { King } from "../pieces/king.js";
 import { Piece } from "../pieces/piece.js";
-import { MoveValidator } from "../rules/move-validator.js";
+import { MoveValidator } from "../rules/move-validator-interface.js";
 import { CastlingRights } from "../types/castling-rights.js";
 import { Color } from "../types/color.js";
 import { GameState } from "../types/game-state.js";
@@ -12,6 +12,7 @@ import { GameStatus } from "../types/game-status.js";
 import { Move } from "../types/move.js";
 import { PieceType } from "../types/piece-type.js";
 import { Position } from "../types/position.js";
+import { KingAndRookStartIndexes } from "../types/starting-indexes.js";
 import { FEN } from "../util/fen.js";
 
 export class Game implements GameState {
@@ -22,6 +23,10 @@ export class Game implements GameState {
     private _moveHistory: Move[] = [];
     private _positionHistory: Map<string, number> = new Map();
     private _initialFEN: string;
+
+    private _moveValidator: MoveValidator;
+
+    public readonly variant: Variant;
 
     private _gameState: GameState = {
         activeColor: Color.White,
@@ -36,15 +41,22 @@ export class Game implements GameState {
         }
     };
 
-    public constructor(board?: Board, clock?: ChessClock, fen?: string) {
-        this._board = board ?? new Board();
+    private _kingStartX!: number;
+    private _rookStartKingsideX!: number;
+    private _rookStartQueensideX!: number;
+
+    public constructor(moveValidator: MoveValidator, variant: Variant = Variant.Standard, board: Board, fen: string, clock?: ChessClock) {
+        this._moveValidator = moveValidator;
+        this._board = board;
         this._clock = clock ?? new ChessClock();
-        this._initialFEN = fen ?? STARTING_FEN;
+        this._initialFEN = fen;
+        this.setStartingIndexes();
+        this.variant = variant;
     }
 
     public makeMove(move: Move): boolean {
         this.assertOngoing();
-        if (!MoveValidator.validateMove(this, move)) {
+        if (!this._moveValidator.validateMove(this, move)) {
             return false;
         }
 
@@ -60,6 +72,7 @@ export class Game implements GameState {
         this.updateFullmoveNumber();
         this.updateGameStatus();
         this.switchActiveColor();
+
         return true;
     }
 
@@ -82,18 +95,27 @@ export class Game implements GameState {
     }
 
     private handleCastling(move: Move): boolean {
-        if (move.piece === PieceType.King && Math.abs(move.from.x - move.to.x) === 2) {
-            const y: number = move.from.y;
-            if (move.to.x > move.from.x) {
-                this.board.movePiece({ x: 7, y }, { x: 5, y });
-            } else {
-                this.board.movePiece({ x: 0, y }, { x: 3, y });
-            }
-            this.board.movePiece(move.from, move.to);
-            this.addToMoveHistory(move);
-            return true;
-        }
-        return false;
+        if (move.castling !== true) return false;
+        const y: number = move.from.y;
+        const isKingSide: boolean = move.to.x === 6;
+
+        const rookFromX: number = isKingSide ? this.rookStartKingsideX : this.rookStartQueensideX;
+        const rookToX: number = isKingSide ? 5 : 3;
+
+        const king: Piece | null = this.board.getPieceAt(move.from);
+        const rook: Piece | null = this.board.getPieceAt({ x: rookFromX, y });
+
+        this.board.setPieceAt(move.from, null);
+        this.board.setPieceAt({ x: rookFromX, y }, null);
+
+        this.board.setPieceAt(move.to, king);
+        if (king) king.moveTo(move.to);
+
+        this.board.setPieceAt({ x: rookToX, y }, rook);
+        if (rook) rook.moveTo({ x: rookToX, y });
+
+        this.addToMoveHistory(move);
+        return true;
     }
 
     private handleEnPassant(move: Move): boolean {
@@ -251,7 +273,7 @@ export class Game implements GameState {
         const king: King | undefined = this._board.getPiecesByColor(color).find(p => p.type === PieceType.King) as King | undefined;
         if (!king) throw new Error("King not found on the board.");
         const opponent: Color = color === Color.White ? Color.Black : Color.White;
-        return MoveValidator.isSquareAttacked(this, king.position, opponent);
+        return this._moveValidator.isSquareAttacked(this, king.position, opponent);
     }
 
     public hasLegalMoves(color: Color): boolean {
@@ -263,9 +285,10 @@ export class Game implements GameState {
                     from: piece.position,
                     to,
                     piece: piece.type,
-                    color: piece.color
+                    color: piece.color,
+                    castling: false
                 };
-                if (MoveValidator.validateMove(this, move)) {
+                if (this._moveValidator.validateMove(this, move)) {
                     return true;
                 }
             }
@@ -280,9 +303,10 @@ export class Game implements GameState {
                         from: piece.position,
                         to,
                         piece: PieceType.King,
-                        color: piece.color
+                        color: piece.color,
+                        castling: true
                     };
-                    if (MoveValidator.validateMove(this, move)) {
+                    if (this._moveValidator.validateMove(this, move)) {
                         return true;
                     }
                 }
@@ -336,7 +360,7 @@ export class Game implements GameState {
         const clonedBoard: Board = this._board.clone();
         const clonedClock: ChessClock = this._clock.clone();
 
-        const clonedGame: Game = new Game(clonedBoard, clonedClock, this._initialFEN);
+        const clonedGame: Game = new Game(this._moveValidator, this.variant, clonedBoard, this._initialFEN, clonedClock);
 
         clonedGame._status = this._status;
         clonedGame._moveHistory = this._moveHistory.map(m => ({ ...m }));
@@ -352,6 +376,10 @@ export class Game implements GameState {
             fullmoveNumber: this._gameState.fullmoveNumber,
             castlingRights: { ...this._gameState.castlingRights }
         };
+
+        clonedGame._kingStartX = this._kingStartX;
+        clonedGame._rookStartKingsideX = this._rookStartKingsideX;
+        clonedGame._rookStartQueensideX = this._rookStartQueensideX;
 
         return clonedGame;
     }
@@ -394,6 +422,14 @@ export class Game implements GameState {
         this._status = color === Color.White ? GameStatus.WhiteResigns : GameStatus.BlackResigns;
     }
 
+    private setStartingIndexes(): void {
+        const { kingX, rookQueensideX, rookKingsideX }: KingAndRookStartIndexes =
+            FEN.getKingAndRookStartIndexesFromFEN(this._initialFEN);
+        this._kingStartX = kingX;
+        this._rookStartQueensideX = rookQueensideX;
+        this._rookStartKingsideX = rookKingsideX;
+    }
+
     public get board(): Board { return this._board; }
 
     public get clock(): ChessClock { return this._clock; }
@@ -420,4 +456,11 @@ export class Game implements GameState {
 
     public get initialFEN(): string { return this._initialFEN; }
     public set initialFEN(value: string) { this._initialFEN = value; }
+
+    public get moveValidator(): MoveValidator { return this._moveValidator; }
+    public set moveValidator(value: MoveValidator) { this._moveValidator = value; }
+
+    public get rookStartQueensideX(): number { return this._rookStartQueensideX; }
+    public get rookStartKingsideX(): number { return this._rookStartKingsideX; }
+    public get kingStartX(): number { return this._kingStartX; }
 }

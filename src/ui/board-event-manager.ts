@@ -2,9 +2,14 @@ import { FILES, RANKS } from "../chess/constants/board.js";
 
 type SquareClickHandler = (file: typeof FILES[number], rank: typeof RANKS[number]) => void;
 
+interface BoardListener {
+    el: HTMLElement;
+    handler: EventListener;
+}
+
 export class BoardEventManager {
 
-    private boardListeners: Array<{ el: HTMLElement, handler: EventListener; }> = [];
+    private boardListeners: BoardListener[] = [];
 
     public constructor() {
 

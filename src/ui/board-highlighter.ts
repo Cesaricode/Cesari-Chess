@@ -1,17 +1,23 @@
 import { FILES } from "../chess/constants/board.js";
 import { Game } from "../chess/game/game.js";
 import { Piece } from "../chess/pieces/piece.js";
-import { MoveValidator } from "../chess/rules/move-validator.js";
+import { MoveValidator } from "../chess/rules/move-validator-interface.js";
+import { CastlingTarget } from "../chess/types/castling-target.js";
 import { Move } from "../chess/types/move.js";
 import { Position } from "../chess/types/position.js";
+import { Variant } from "../types/variant.js";
 import { UiRenderer } from "./ui-renderer.js";
 
 export class BoardHighlighter {
 
     private _ui: UiRenderer;
+    private _moveValidator: MoveValidator;
+    private _variant: Variant;
 
-    public constructor(ui: UiRenderer) {
+    public constructor(ui: UiRenderer, moveValidator: MoveValidator, variant: Variant) {
         this._ui = ui;
+        this._moveValidator = moveValidator;
+        this._variant = variant;
     }
 
     public resetAllHiglights(): void {
@@ -26,9 +32,10 @@ export class BoardHighlighter {
                 from,
                 to: movePos,
                 piece: piece.type,
-                color: piece.color
+                color: piece.color,
+                castling: false
             };
-            if (!MoveValidator.validateMove(game, move)) continue;
+            if (!this._moveValidator.validateMove(game, move)) continue;
             const targetFile: string = FILES[movePos.x];
             const targetRank: number = movePos.y + 1;
             const targetPiece: Piece | null = game.board.getPieceAt(movePos);
@@ -43,28 +50,21 @@ export class BoardHighlighter {
     }
 
     public higlightLegalCastlingMoves(game: Game, piece: Piece, from: Position): void {
-        if (piece.type === "king") {
-            const castlingTargets: Position[] = [];
-            if (piece.color === "white" && from.x === 4 && from.y === 0) {
-                castlingTargets.push({ x: 6, y: 0 });
-                castlingTargets.push({ x: 2, y: 0 });
-            }
-            if (piece.color === "black" && from.x === 4 && from.y === 7) {
-                castlingTargets.push({ x: 6, y: 7 });
-                castlingTargets.push({ x: 2, y: 7 });
-            }
-            for (const castlePos of castlingTargets) {
-                const move: Move = {
-                    from,
-                    to: castlePos,
-                    piece: piece.type,
-                    color: piece.color
-                };
-                if (MoveValidator.validateMove(game, move)) {
-                    const targetFile: string = FILES[castlePos.x];
-                    const targetRank: number = castlePos.y + 1;
-                    this._ui.highlightSquare(`${targetFile}${targetRank}`);
-                }
+        if (piece.type !== "king") return;
+
+        const y: number = from.y;
+        const castlingTargets: CastlingTarget[] = this.getCastlingTargets(game, piece, y);
+
+        for (const { to, rook, right } of castlingTargets) {
+            const move: Move = {
+                from,
+                to,
+                piece: piece.type,
+                color: piece.color,
+                castling: true
+            };
+            if (right && this._moveValidator.validateMove(game, move)) {
+                this.highlightCastlingSquares(to, rook);
             }
         }
     }
@@ -94,5 +94,48 @@ export class BoardHighlighter {
         } else {
             this._ui.resetLastMoveHighlights();
         }
+    }
+
+    private getCastlingTargets(game: Game, piece: Piece, y: number): CastlingTarget[] {
+        const kingsideRookX: number = game.rookStartKingsideX;
+        const kingsideRookPos: Position = { x: kingsideRookX, y };
+        const kingsideCastleTo: Position = { x: 6, y };
+        const kingsideRight: boolean = piece.color === "white"
+            ? game.castlingRights.whiteKingSide
+            : game.castlingRights.blackKingSide;
+
+        const queensideRookX: number = game.rookStartQueensideX;
+        const queensideRookPos: Position = { x: queensideRookX, y };
+        const queensideCastleTo: Position = { x: 2, y };
+        const queensideRight: boolean = piece.color === "white"
+            ? game.castlingRights.whiteQueenSide
+            : game.castlingRights.blackQueenSide;
+
+        return [
+            {
+                to: kingsideCastleTo,
+                rook: kingsideRookPos,
+                right: kingsideRight,
+                side: "kingside"
+            },
+            {
+                to: queensideCastleTo,
+                rook: queensideRookPos,
+                right: queensideRight,
+                side: "queenside"
+            }
+        ];
+    }
+
+    private highlightCastlingSquares(to: Position, rook: Position): void {
+        if (this._variant === Variant.Standard) {
+            const targetFile: string = FILES[to.x];
+            const targetRank: number = to.y + 1;
+            this._ui.highlightSquare(`${targetFile}${targetRank}`);
+        }
+
+        const rookFile: string = FILES[rook.x];
+        const rookRank: number = rook.y + 1;
+        this._ui.highlightSquare(`${rookFile}${rookRank}`, "targethighlighted");
     }
 }

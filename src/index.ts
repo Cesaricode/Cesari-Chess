@@ -69,6 +69,7 @@ function showSetupModal(opponent: string): void {
 
     startGameBtn.onclick = function () {
         let color: string = colorSelect.value;
+        let mode: string = startTypeSelect.value;
         const startType: string = startTypeSelect.value;
         const fen: string = fenInput.value.trim();
 
@@ -86,7 +87,7 @@ function showSetupModal(opponent: string): void {
         if (color === "random") {
             color = Math.random() < 0.5 ? "white" : "black";
         }
-        let url: string = "game.html?mode=" + encodeURIComponent(opponent) + "&color=" + encodeURIComponent(color);
+        let url: string = "game.html?mode=" + encodeURIComponent(opponent) + "&color=" + encodeURIComponent(color) + "&variant=" + encodeURIComponent(mode);
         if (startType === "fen" && fen) {
             url += "&fen=" + encodeURIComponent(fen);
         }

@@ -11,10 +11,11 @@ import { Color } from "./chess/types/color.js";
 import { GameControllerFactory } from "./controller/game-controller-factory.js";
 import { PlayerFactory } from "./player/player-factory.js";
 import { parseColor } from "./util/color.js";
-import { getColorFromUrl, getContinueFromUrl, getFENFromUrl, getModeFromUrl } from "./util/url.js";
+import { getColorFromUrl, getContinueFromUrl, getFENFromUrl, getModeFromUrl, getVariantFromUrl } from "./util/url.js";
 function init() {
     return __awaiter(this, void 0, void 0, function* () {
         const mode = getModeFromUrl();
+        const variant = getVariantFromUrl();
         const colorParam = getColorFromUrl();
         const fen = getFENFromUrl();
         const color = parseColor(colorParam);
@@ -28,40 +29,40 @@ function init() {
         sessionStorage.removeItem("startNewGame");
         if (mode === "self") {
             if (fen)
-                yield GameControllerFactory.createLocalVsLocalFromFEN(fen, color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsLocalFromFEN(variant, fen, color !== null && color !== void 0 ? color : undefined);
             else
-                yield GameControllerFactory.createLocalVsLocal(color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsLocal(variant, color !== null && color !== void 0 ? color : undefined);
             return;
         }
         else if (mode === "randy") {
             const botColor = color === Color.Black ? Color.White : Color.Black;
             if (fen)
-                yield GameControllerFactory.createLocalVsBotFromFEN(PlayerFactory.createRandyBot(botColor), fen, color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsBotFromFEN(variant, PlayerFactory.createRandyBot(botColor), fen, color !== null && color !== void 0 ? color : undefined);
             else
-                yield GameControllerFactory.createLocalVsBot(PlayerFactory.createRandyBot(botColor), color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsBot(variant, PlayerFactory.createRandyBot(botColor), color !== null && color !== void 0 ? color : undefined);
             return;
         }
         else if (mode === "stockfish") {
             const botColor = color === Color.Black ? Color.White : Color.Black;
             if (fen)
-                yield GameControllerFactory.createLocalVsBotFromFEN(PlayerFactory.createStockfishBot(botColor), fen, color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsBotFromFEN(variant, PlayerFactory.createStockfishBot(botColor), fen, color !== null && color !== void 0 ? color : undefined);
             else
-                yield GameControllerFactory.createLocalVsBot(PlayerFactory.createStockfishBot(botColor), color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsBot(variant, PlayerFactory.createStockfishBot(botColor), color !== null && color !== void 0 ? color : undefined);
             return;
         }
         else if (mode === "cesaribot") {
             const botColor = color === Color.Black ? Color.White : Color.Black;
             if (fen)
-                yield GameControllerFactory.createLocalVsBotFromFEN(PlayerFactory.createRandyBot(botColor), fen, color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsBotFromFEN(variant, PlayerFactory.createRandyBot(botColor), fen, color !== null && color !== void 0 ? color : undefined);
             else
-                yield GameControllerFactory.createLocalVsBot(PlayerFactory.createRandyBot(botColor), color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsBot(variant, PlayerFactory.createRandyBot(botColor), color !== null && color !== void 0 ? color : undefined);
             return;
         }
         else if (mode) {
             if (fen)
-                yield GameControllerFactory.createLocalVsLocalFromFEN(fen, color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsLocalFromFEN(variant, fen, color !== null && color !== void 0 ? color : undefined);
             else
-                yield GameControllerFactory.createLocalVsLocal(color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsLocal(variant, color !== null && color !== void 0 ? color : undefined);
             return;
         }
         else {
