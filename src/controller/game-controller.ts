@@ -274,8 +274,6 @@ export class GameController {
         this._ui.render(gameToRender, activeMoveIndex);
         this._boardHighLighter.highlightHistoryMove(gameToRender, activeMoveIndex);
         this._historyEventManager.updateHistoryRoster();
-
-        this.setDragAndDrop();
     }
 
 
@@ -334,25 +332,6 @@ export class GameController {
 
     // Helpers
 
-
-    private setDragAndDrop(): void {
-        this._ui.enableDragAndDrop(
-            this._game,
-            async (from: Position, to: Position) => {
-                if (!this._isBoardEnabled || this._historyManager.historyIndex !== null) return;
-                const fromPiece: Piece | null = this._game.board.getPieceAt(from);
-                if (!fromPiece) return;
-                const move: Move = this.buildMoveObject(fromPiece, from, to);
-                await this.attemptMove(move);
-            },
-            (from: Position) => {
-                this.setUserHasInteracted();
-                const file: typeof FILES[number] = FILES[from.x];
-                const rank: typeof RANKS[number] = from.y + 1 as typeof RANKS[number];
-                this.handleFirstSquareClick(from, file, rank);
-            }
-        );
-    }
 
     private isSelectingRookForCastle(fromPiece: Piece | null, toPiece: Piece | null): boolean {
         if (

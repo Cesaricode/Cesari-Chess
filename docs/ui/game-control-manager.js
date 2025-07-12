@@ -33,7 +33,19 @@ export class GameControlManager {
                 this._resignRestartState = "restart";
             }
             else if (this._resignRestartState === "restart") {
-                window.location.reload();
+                const url = new URL(window.location.href);
+                const params = url.searchParams;
+                const currentColor = params.get("color");
+                let newColor;
+                if (currentColor === "white")
+                    newColor = "black";
+                else if (currentColor === "black")
+                    newColor = "white";
+                else
+                    newColor = "white";
+                params.set("color", newColor);
+                url.search = params.toString();
+                window.location.href = url.toString();
             }
         };
     }

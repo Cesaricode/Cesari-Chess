@@ -229,7 +229,6 @@ export class GameController {
         this._ui.render(gameToRender, activeMoveIndex);
         this._boardHighLighter.highlightHistoryMove(gameToRender, activeMoveIndex);
         this._historyEventManager.updateHistoryRoster();
-        this.setDragAndDrop();
     }
     // Undo & redo / History navigation
     undo() {
@@ -268,22 +267,6 @@ export class GameController {
         this.renderAppropriateGameState();
     }
     // Helpers
-    setDragAndDrop() {
-        this._ui.enableDragAndDrop(this._game, (from, to) => __awaiter(this, void 0, void 0, function* () {
-            if (!this._isBoardEnabled || this._historyManager.historyIndex !== null)
-                return;
-            const fromPiece = this._game.board.getPieceAt(from);
-            if (!fromPiece)
-                return;
-            const move = this.buildMoveObject(fromPiece, from, to);
-            yield this.attemptMove(move);
-        }), (from) => {
-            this.setUserHasInteracted();
-            const file = FILES[from.x];
-            const rank = from.y + 1;
-            this.handleFirstSquareClick(from, file, rank);
-        });
-    }
     isSelectingRookForCastle(fromPiece, toPiece) {
         if (fromPiece &&
             toPiece &&

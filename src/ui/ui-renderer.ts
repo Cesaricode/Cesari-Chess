@@ -242,48 +242,6 @@ export class UiRenderer {
         this.scrollSelectedMoveIntoView();
     }
 
-    public enableDragAndDrop(
-        game: Game,
-        onDrop: (from: Position, to: Position) => void,
-        onPickup: (from: Position) => void
-    ): void {
-        for (const piece of game.board.getAllPieces()) {
-            if (!piece.isActive()) continue;
-            const { x, y } = piece.position;
-            const file: typeof FILES[number] = FILES[x];
-            const rank: typeof RANKS[number] = y + 1 as typeof RANKS[number];
-            const squareId: string = `${file}${rank}`;
-            const square: HTMLElement | null = document.getElementById(squareId);
-            const img: HTMLImageElement | null = square?.querySelector("img.piece") as HTMLImageElement | null;
-            if (img) {
-                img.setAttribute("draggable", "true");
-                img.ondragstart = (e: DragEvent) => {
-                    e.dataTransfer?.setData("from", JSON.stringify({ x, y }));
-                    if (onPickup) onPickup({ x, y });
-                };
-            }
-        }
-
-        for (const file of FILES) {
-            for (const rank of RANKS) {
-                const squareId: string = `${file}${rank}`;
-                const square: HTMLElement | null = document.getElementById(squareId);
-                if (!square) continue;
-                square.ondragover = (e: DragEvent) => {
-                    e.preventDefault();
-                };
-                square.ondrop = (e: DragEvent) => {
-                    e.preventDefault();
-                    const fromStr = e.dataTransfer?.getData("from");
-                    if (!fromStr) return;
-                    const from: Position = JSON.parse(fromStr);
-                    const to: Position = { x: FILES.indexOf(file), y: rank - 1 };
-                    onDrop(from, to);
-                };
-            }
-        }
-    }
-
 
     // Helpers
 
