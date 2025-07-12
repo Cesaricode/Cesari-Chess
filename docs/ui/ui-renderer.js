@@ -189,6 +189,48 @@ export class UiRenderer {
         }
         this.scrollSelectedMoveIntoView();
     }
+    enableDragAndDrop(game, onDrop, onPickup) {
+        for (const piece of game.board.getAllPieces()) {
+            if (!piece.isActive())
+                continue;
+            const { x, y } = piece.position;
+            const file = FILES[x];
+            const rank = y + 1;
+            const squareId = `${file}${rank}`;
+            const square = document.getElementById(squareId);
+            const img = square === null || square === void 0 ? void 0 : square.querySelector("img.piece");
+            if (img) {
+                img.setAttribute("draggable", "true");
+                img.ondragstart = (e) => {
+                    var _a;
+                    (_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData("from", JSON.stringify({ x, y }));
+                    if (onPickup)
+                        onPickup({ x, y });
+                };
+            }
+        }
+        for (const file of FILES) {
+            for (const rank of RANKS) {
+                const squareId = `${file}${rank}`;
+                const square = document.getElementById(squareId);
+                if (!square)
+                    continue;
+                square.ondragover = (e) => {
+                    e.preventDefault();
+                };
+                square.ondrop = (e) => {
+                    var _a;
+                    e.preventDefault();
+                    const fromStr = (_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.getData("from");
+                    if (!fromStr)
+                        return;
+                    const from = JSON.parse(fromStr);
+                    const to = { x: FILES.indexOf(file), y: rank - 1 };
+                    onDrop(from, to);
+                };
+            }
+        }
+    }
     // Helpers
     clearBoard() {
         for (const file of FILES) {
@@ -208,7 +250,7 @@ export class UiRenderer {
             const rank = y + 1;
             const square = document.getElementById(`${file}${rank}`);
             if (square) {
-                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="false" />`;
+                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="true" />`;
             }
         }
     }

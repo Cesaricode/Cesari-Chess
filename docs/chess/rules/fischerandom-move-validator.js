@@ -36,9 +36,14 @@ export class FischerandomMoveValidator extends BaseMoveValidator {
             ? Array.from({ length: move.to.x - move.from.x }, (_, i) => move.from.x + i + 1)
             : Array.from({ length: move.from.x - move.to.x }, (_, i) => move.from.x - i - 1);
         for (const x of kingPath) {
-            if (game.board.getPieceAt({ x, y })) {
-                const piece = game.board.getPieceAt({ x, y });
-                if (piece && (piece.type !== PieceType.Rook || piece.color !== move.color || piece.state.hasMoved)) {
+            const piece = game.board.getPieceAt({ x, y });
+            if (piece) {
+                const isCastlingRook = piece.type === PieceType.Rook &&
+                    piece.color === move.color &&
+                    !piece.state.hasMoved &&
+                    piece.position.x === rookX &&
+                    piece.position.y === y;
+                if (!isCastlingRook) {
                     return false;
                 }
             }
@@ -48,14 +53,27 @@ export class FischerandomMoveValidator extends BaseMoveValidator {
                 return false;
         }
         const rookDestX = isKingSide ? 5 : 3;
-        const rookStep = rookDestX > rookX ? 1 : -1;
-        for (let x = rookX + rookStep; x !== rookDestX; x += rookStep) {
-            const rookDestPiece = game.board.getPieceAt({ x, y });
-            if (rookDestPiece) {
-                if (rookDestPiece.type === PieceType.King && rookDestPiece.color === move.color)
-                    continue;
-                else
-                    return false;
+        if (rookDestX !== rookX) {
+            const rookStep = rookDestX > rookX ? 1 : -1;
+            for (let x = rookX + rookStep; x !== rookDestX; x += rookStep) {
+                const rookDestPiece = game.board.getPieceAt({ x, y });
+                if (rookDestPiece) {
+                    if (rookDestPiece.type === PieceType.King && rookDestPiece.color === move.color)
+                        continue;
+                    if (rookDestPiece.type === PieceType.Rook &&
+                        rookDestPiece.color === move.color &&
+                        rookDestPiece.position.x === rookX &&
+                        rookDestPiece.position.y === y)
+                        continue;
+                    else
+                        return false;
+                }
+            }
+            const rookDestPiece = game.board.getPieceAt({ x: rookDestX, y });
+            if (rookDestPiece &&
+                !((rookDestPiece.type === PieceType.King && rookDestPiece.color === move.color && move.from.x === rookDestX) ||
+                    (rookDestPiece === rook))) {
+                return false;
             }
         }
         return true;
