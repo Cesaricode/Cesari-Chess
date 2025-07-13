@@ -8,15 +8,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { BotPlayer } from "../bot-player.js";
-import { CesariEngine } from "../../engine/cesari/cesari-engine.js";
+import { FEN } from "../../chess/util/fen.js";
 export class CesariBot extends BotPlayer {
     constructor(color) {
         super("Cesari", color);
-        this._cesariEngine = new CesariEngine();
+        this._worker = new Worker("../../engine/cesari/cesari-worker.js", { type: "module" });
     }
     getMove(game) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this._cesariEngine.findBestMove(game);
+            return new Promise((resolve, reject) => {
+                const fen = FEN.serializeFullFEN(game);
+                this._worker.onmessage = (e) => {
+                    resolve(e.data.move);
+                };
+                this._worker.onerror = (err) => {
+                    reject(err);
+                };
+                this._worker.postMessage({ fen });
+            });
         });
     }
 }

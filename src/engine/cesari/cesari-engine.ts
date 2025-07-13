@@ -12,10 +12,11 @@ export interface EngineOptions {
     timeLimitMs?: number;
 }
 
-interface TTEntry {
+export interface TTEntry {
     eval: number;
     depth: number;
     flag: "EXACT" | "LOWERBOUND" | "UPPERBOUND";
+    bestMove?: Move;
 }
 
 export class CesariEngine {
@@ -25,8 +26,8 @@ export class CesariEngine {
     private transpositionTable = new Map<string, TTEntry>();
 
     constructor(options: EngineOptions = {}) {
-        this.maxDepth = options.maxDepth ?? 4;
-        this.timeLimitMs = options.timeLimitMs ?? 10000;
+        this.maxDepth = options.maxDepth ?? 3;
+        this.timeLimitMs = options.timeLimitMs ?? 30000;
         console.log(this.maxDepth);
     }
 
@@ -40,40 +41,44 @@ export class CesariEngine {
 
         const maximizing: boolean = game.activeColor === Color.White;
 
-
         this.stopSearch = false;
         for (let depth = 1; depth <= this.maxDepth; depth++) {
             if (this.stopSearch) break;
 
             let bestEval: number = maximizing ? -Infinity : Infinity;
+            bestMove = null;
+
             for (const move of legalMoves) {
                 if (this.stopSearch) break;
                 const clone: Game = game.clone();
                 clone.makeMove(move);
                 const evalScore: number = this.search(clone, depth - 1, -Infinity, Infinity, !maximizing, start);
 
-                if (
-                    (maximizing && evalScore > bestEval) ||
-                    (!maximizing && evalScore < bestEval) ||
-                    bestMove === null
-                ) {
+                if ((maximizing && (bestMove === null || evalScore > bestEval)) ||
+                    (!maximizing && (bestMove === null || evalScore < bestEval))) {
                     bestEval = evalScore;
                     bestMove = move;
                 }
             }
+
+            if (!this.stopSearch && bestMove !== null) {
+                lastBestMove = bestMove;
+                console.log(bestMove, "- eval:", bestEval, " - depth:", depth);
+            }
+
             if (performance.now() - start > this.timeLimitMs) {
+                this.stopSearch = true;
                 console.log("timeout in findbestmove");
                 break;
             }
         }
 
-
-        if (!bestMove) throw new Error("Error generating legal moves for Cesari Engine: Could not find best move");
-        return bestMove;
+        if (!lastBestMove) throw new Error("Error generating legal moves for Cesari Engine: Could not find best move");
+        return lastBestMove;
     }
 
     private search(game: Game, depth: number, alpha: number, beta: number, maximizing: boolean, startTime: number): number {
-        console.log("search called");
+        // console.log("search called");
         // console.log(depth);
         // printBoardToConsole(game.board);
 
@@ -81,6 +86,17 @@ export class CesariEngine {
         const alphaOrig = alpha;
 
         const ttEntry = this.transpositionTable.get(key);
+
+        let legalMoves: Move[] = this.generateLegalMoves(game).sort((a, b) => this.scoreMove(b, game) - this.scoreMove(a, game));
+
+        if (ttEntry && ttEntry.bestMove) {
+            const idx = legalMoves.findIndex(m => JSON.stringify(m) === JSON.stringify(ttEntry.bestMove));
+            if (idx > 0) {
+                const [ttMove] = legalMoves.splice(idx, 1);
+                legalMoves.unshift(ttMove);
+            }
+        }
+
         if (ttEntry && ttEntry.depth >= depth) {
             if (ttEntry.flag === "EXACT") return ttEntry.eval;
             if (ttEntry.flag === "LOWERBOUND") alpha = Math.max(alpha, ttEntry.eval);
@@ -93,16 +109,19 @@ export class CesariEngine {
             return this.evaluate(game);
         }
 
-        if (depth === 0 || game.status !== undefined && game.status !== null && game.status !== "ongoing") {
+        if (depth === 0) {
+            return this.quiescence(game, alpha, beta);
+        }
+        if (game.status !== undefined && game.status !== null && game.status !== "ongoing") {
             return this.evaluate(game);
         }
 
-        const legalMoves: Move[] = this.generateLegalMoves(game).sort((a, b) => this.scoreMove(b, game) - this.scoreMove(a, game));
         if (legalMoves.length === 0) {
             return this.evaluate(game);
         }
 
         let bestEval: number = maximizing ? -Infinity : Infinity;
+        let bestMove: Move | null = null;
 
         for (const move of legalMoves) {
             if (this.stopSearch) break;
@@ -111,11 +130,17 @@ export class CesariEngine {
             const evalScore: number = this.search(clone, depth - 1, alpha, beta, !maximizing, startTime);
 
             if (maximizing) {
-                bestEval = Math.max(bestEval, evalScore);
+                if (evalScore > bestEval) {
+                    bestEval = evalScore;
+                    bestMove = move;
+                }
                 alpha = Math.max(alpha, evalScore);
                 if (beta <= alpha) break;
             } else {
-                bestEval = Math.min(bestEval, evalScore);
+                if (evalScore < bestEval) {
+                    bestEval = evalScore;
+                    bestMove = move;
+                }
                 beta = Math.min(beta, evalScore);
                 if (beta <= alpha) break;
             }
@@ -124,7 +149,7 @@ export class CesariEngine {
         let flag: "EXACT" | "LOWERBOUND" | "UPPERBOUND" = "EXACT";
         if (bestEval <= alphaOrig) flag = "UPPERBOUND";
         else if (bestEval >= beta) flag = "LOWERBOUND";
-        this.transpositionTable.set(key, { eval: bestEval, depth, flag });
+        this.transpositionTable.set(key, { eval: bestEval, depth, flag, bestMove: bestMove ?? undefined });
 
         return bestEval;
     }
@@ -201,5 +226,25 @@ export class CesariEngine {
         if (move.promotion) promotionBonus = 800;
 
         return (victimValue) * 10 - attackerValue + promotionBonus;
+    }
+
+    private quiescence(game: Game, alpha: number, beta: number): number {
+        let standPat = this.evaluate(game);
+        if (standPat >= beta) return beta;
+        if (alpha < standPat) alpha = standPat;
+
+        const captureMoves = this.generateLegalMoves(game).filter(m => {
+            const target = game.board.getPieceAt(m.to);
+            return target !== null; // Only captures
+        });
+
+        for (const move of captureMoves) {
+            const clone = game.clone();
+            clone.makeMove(move);
+            let score = -this.quiescence(clone, -beta, -alpha);
+            if (score >= beta) return beta;
+            if (score > alpha) alpha = score;
+        }
+        return alpha;
     }
 }
