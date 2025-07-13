@@ -39,7 +39,10 @@ export class HistoryEventManager {
         let interval;
         let timeout;
         let longPress = false;
-        const start = () => {
+        let touchInProgress = false;
+        const start = (e) => {
+            if (touchInProgress)
+                return;
             action();
             timeout = window.setTimeout(() => {
                 longPress = true;
@@ -62,6 +65,7 @@ export class HistoryEventManager {
         btn.onblur = stop;
         btn.oncontextmenu = stop;
         btn.ontouchstart = (e) => {
+            touchInProgress = true;
             longPress = false;
             timeout = window.setTimeout(() => {
                 longPress = true;
@@ -72,7 +76,11 @@ export class HistoryEventManager {
             if (!longPress)
                 action();
             stop();
+            setTimeout(() => { touchInProgress = false; }, 100);
         };
-        btn.ontouchcancel = stop;
+        btn.ontouchcancel = () => {
+            stop();
+            setTimeout(() => { touchInProgress = false; }, 100);
+        };
     }
 }

@@ -59,9 +59,11 @@ export class HistoryEventManager {
     private setupHoldableButton(btn: HTMLButtonElement, action: () => void) {
         let interval: number | undefined;
         let timeout: number | undefined;
-        let longPress = false;
+        let longPress: boolean = false;
+        let touchInProgress: boolean = false;
 
-        const start = () => {
+        const start = (e?: MouseEvent) => {
+            if (touchInProgress) return;
             action();
             timeout = window.setTimeout(() => {
                 longPress = true;
@@ -84,6 +86,7 @@ export class HistoryEventManager {
         btn.oncontextmenu = stop;
 
         btn.ontouchstart = (e) => {
+            touchInProgress = true;
             longPress = false;
             timeout = window.setTimeout(() => {
                 longPress = true;
@@ -93,7 +96,11 @@ export class HistoryEventManager {
         btn.ontouchend = (e) => {
             if (!longPress) action();
             stop();
+            setTimeout(() => { touchInProgress = false; }, 100);
         };
-        btn.ontouchcancel = stop;
+        btn.ontouchcancel = () => {
+            stop();
+            setTimeout(() => { touchInProgress = false; }, 100);
+        };
     }
 }
