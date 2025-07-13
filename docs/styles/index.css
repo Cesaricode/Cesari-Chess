@@ -213,3 +213,25 @@
     color: var(--color-accent, #f6f669);
     border-color: var(--color-accent, #f6f669);
 }
+
+@media (max-width: 900px) {
+    .menu-row {
+        flex-direction: column;
+        align-items: center;
+        min-height: unset;
+        gap: 4px;
+    }
+
+    .menu-flavour {
+        position: static;
+        left: unset;
+        top: unset;
+        transform: none;
+        margin-top: 4px;
+        text-align: center;
+        width: 100%;
+        white-space: normal;
+        font-size: 0.98em;
+        z-index: 1;
+    }
+}
