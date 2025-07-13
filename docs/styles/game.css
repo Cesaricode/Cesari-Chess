@@ -564,14 +564,16 @@ select#promote:focus {
 @media (max-width: 1400px) {
 
     .square img {
-        width: 56px;
-        height: 56px;
+        width: 75%;
+        height: auto;
     }
 
     .label,
     .square {
-        min-width: 56px;
-        min-height: 56px;
+        min-width: 26px;
+        min-height: 26px;
+        width: 56px;
+        height: 56px;
     }
 }
 
@@ -613,14 +615,17 @@ select#promote:focus {
     }
 
     .square img {
-        width: 76px;
-        height: 76px;
+        width: 75%;
+        height: auto;
     }
 
     .label,
     .square {
-        min-width: 76px;
-        min-height: 76px;
+        aspect-ratio: 1 / 1;
+        width: 100%;
+        height: auto;
+        min-width: 0x;
+        min-height: 0px;
     }
 
     #controls {
@@ -640,12 +645,23 @@ select#promote:focus {
     }
 
     #chessBoardContainer {
-        justify-content: center;
+        aspect-ratio: 1 / 1;
+        width: 100%;
         margin-bottom: 16px;
+        height: auto;
+        justify-content: center;
+        display: flex;
     }
 
     #chessBoard {
+        aspect-ratio: 1 / 1;
         margin-top: 16px;
+        width: 100%;
+        height: auto;
+    }
+
+    .home-btn {
+        font-size: 0;
     }
 }
 
@@ -665,22 +681,6 @@ select#promote:focus {
         font-size: 0.95em;
     }
 
-
-    .square img {
-        width: 58px;
-        height: 58px;
-    }
-
-    .label,
-    .square {
-        min-width: 58px;
-        min-height: 58px;
-    }
-
-    #chessBoard {
-        margin-top: 8px;
-    }
-
     .player-name {
         padding: 4px 8px;
         font-size: 0.98em;
@@ -692,17 +692,6 @@ select#promote:focus {
 }
 
 @media (max-width: 620px) {
-    .square img {
-        width: 44px;
-        height: 44px;
-    }
-
-    .label,
-    .square {
-        min-width: 44px;
-        min-height: 44px;
-    }
-
     .home-btn {
         left: 14px;
         top: 4px;
@@ -718,18 +707,6 @@ select#promote:focus {
 }
 
 @media (max-width: 420px) {
-
-    .square img {
-        width: 24px;
-        height: 24px;
-    }
-
-    .label,
-    .square {
-        min-width: 24px;
-        min-height: 24px;
-    }
-
     .player-name {
         font-size: 0.85em;
     }
