@@ -297,6 +297,6 @@ export class UiRenderer {
             pawn: "P"
         };
         const typeLetter = typeMap[piece.type];
-        return `/icons/${colorPrefix}${typeLetter}.svg`;
+        return `icons/${colorPrefix}${typeLetter}.svg`;
     }
 }
