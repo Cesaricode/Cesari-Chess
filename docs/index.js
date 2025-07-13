@@ -5,7 +5,7 @@ function init() {
         const opponent = ((_a = btn.textContent) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes("yourself")) ? "self"
             : ((_b = btn.textContent) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes("randy")) ? "randy"
                 : ((_c = btn.textContent) === null || _c === void 0 ? void 0 : _c.toLowerCase().includes("stockfish")) ? "stockfish"
-                    : ((_d = btn.textContent) === null || _d === void 0 ? void 0 : _d.toLowerCase().includes("cesaribot")) ? "cesaribot"
+                    : ((_d = btn.textContent) === null || _d === void 0 ? void 0 : _d.toLowerCase().includes("cesari-bot")) ? "cesaribot"
                         : undefined;
         if (opponent && !btn.disabled) {
             btn.onclick = (e) => {

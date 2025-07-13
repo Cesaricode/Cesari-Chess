@@ -15,7 +15,7 @@ function init(): void {
         const opponent = btn.textContent?.toLowerCase().includes("yourself") ? "self"
             : btn.textContent?.toLowerCase().includes("randy") ? "randy"
                 : btn.textContent?.toLowerCase().includes("stockfish") ? "stockfish"
-                    : btn.textContent?.toLowerCase().includes("cesaribot") ? "cesaribot"
+                    : btn.textContent?.toLowerCase().includes("cesari-bot") ? "cesaribot"
                         : undefined;
         if (opponent && !btn.disabled) {
             btn.onclick = (e) => {

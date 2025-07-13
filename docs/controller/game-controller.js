@@ -165,6 +165,7 @@ export class GameController {
                 this._soundManager.playMoveSound();
             }
             this.updateSaveGameState();
+            yield new Promise(resolve => setTimeout(resolve, 10));
             yield this.tryBotMove();
         });
     }

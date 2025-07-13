@@ -2,15 +2,17 @@ import { BotPlayer } from "../bot-player.js";
 import { Game } from "../../chess/game/game.js";
 import { Move } from "../../chess/types/move.js";
 import { Color } from "../../chess/types/color.js";
-import { StockfishService } from "../../engine/stockfish/stockfish-service.js";
+import { CesariEngine } from "../../engine/cesari/cesari-engine.js";
 
-export class StockfishBot extends BotPlayer {
+export class CesariBot extends BotPlayer {
+
+    private _cesariEngine: CesariEngine = new CesariEngine();
 
     public constructor(color: Color) {
-        super("Stockfish", color);
+        super("Cesari", color);
     }
 
     public async getMove(game: Game): Promise<Move> {
-        return StockfishService.getBestMove(game);
+        return this._cesariEngine.findBestMove(game);
     }
 }

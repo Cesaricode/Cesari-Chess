@@ -8,14 +8,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { BotPlayer } from "../bot-player.js";
-import { StockfishService } from "../../engine/stockfish/stockfish-service.js";
-export class StockfishBot extends BotPlayer {
+import { CesariEngine } from "../../engine/cesari/cesari-engine.js";
+export class CesariBot extends BotPlayer {
     constructor(color) {
-        super("Stockfish", color);
+        super("Cesari", color);
+        this._cesariEngine = new CesariEngine();
     }
     getMove(game) {
         return __awaiter(this, void 0, void 0, function* () {
-            return StockfishService.getBestMove(game);
+            return this._cesariEngine.findBestMove(game);
         });
     }
 }

@@ -7,8 +7,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { FEN } from "../chess/util/fen.js";
-import { parseUciMoveToMoveObject } from "../chess/util/uci.js";
+import { FEN } from "../../chess/util/fen.js";
+import { parseUciMoveToMoveObject } from "../../chess/util/uci.js";
 export class StockfishService {
     constructor() { }
     static getBestMove(game_1) {

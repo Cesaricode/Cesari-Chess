@@ -1,6 +1,7 @@
 import { HumanPlayer } from "./human-player.js";
 import { RandyBot } from "./bots/randy.js";
 import { StockfishBot } from "./bots/stockfish.js";
+import { CesariBot } from "./bots/cesari.js";
 export class PlayerFactory {
     constructor() { }
     static createHumanPlayer(name, color) {
@@ -11,5 +12,8 @@ export class PlayerFactory {
     }
     static createStockfishBot(color) {
         return new StockfishBot(color);
+    }
+    static createCesariBot(color) {
+        return new CesariBot(color);
     }
 }

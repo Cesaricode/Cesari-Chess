@@ -38,8 +38,8 @@ async function init() {
         return;
     } else if (mode === "cesaribot") {
         const botColor = color === Color.Black ? Color.White : Color.Black;
-        if (fen) await GameControllerFactory.createLocalVsBotFromFEN(variant, PlayerFactory.createRandyBot(botColor), fen, color ?? undefined);
-        else await GameControllerFactory.createLocalVsBot(variant, PlayerFactory.createRandyBot(botColor), color ?? undefined);
+        if (fen) await GameControllerFactory.createLocalVsBotFromFEN(variant, PlayerFactory.createCesariBot(botColor), fen, color ?? undefined);
+        else await GameControllerFactory.createLocalVsBot(variant, PlayerFactory.createCesariBot(botColor), color ?? undefined);
         return;
     } else if (mode) {
         if (fen) await GameControllerFactory.createLocalVsLocalFromFEN(variant, fen, color ?? undefined);

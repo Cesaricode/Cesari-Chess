@@ -53,9 +53,9 @@ function init() {
         else if (mode === "cesaribot") {
             const botColor = color === Color.Black ? Color.White : Color.Black;
             if (fen)
-                yield GameControllerFactory.createLocalVsBotFromFEN(variant, PlayerFactory.createRandyBot(botColor), fen, color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsBotFromFEN(variant, PlayerFactory.createCesariBot(botColor), fen, color !== null && color !== void 0 ? color : undefined);
             else
-                yield GameControllerFactory.createLocalVsBot(variant, PlayerFactory.createRandyBot(botColor), color !== null && color !== void 0 ? color : undefined);
+                yield GameControllerFactory.createLocalVsBot(variant, PlayerFactory.createCesariBot(botColor), color !== null && color !== void 0 ? color : undefined);
             return;
         }
         else if (mode) {

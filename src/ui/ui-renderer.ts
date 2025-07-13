@@ -263,7 +263,7 @@ export class UiRenderer {
             const rank: number = y + 1;
             const square: HTMLElement | null = document.getElementById(`${file}${rank}`);
             if (square) {
-                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="true" />`;
+                square.innerHTML = `<img class="piece ${piece.color} ${piece.type}" src="${this.getPieceIconPath(piece)}" width="60" height="60" draggable="false" />`;
             }
         }
     }

@@ -147,8 +147,8 @@ export class GameControllerFactory {
             let bot: Player;
             if (saveData.botType === "Stockfish") {
                 bot = PlayerFactory.createStockfishBot(saveData.botColor);
-            } else if (saveData.botType === "Cesari-Bot") {
-                bot = PlayerFactory.createRandyBot(saveData.botColor);
+            } else if (saveData.botType === "Cesari") {
+                bot = PlayerFactory.createCesariBot(saveData.botColor);
             } else {
                 bot = PlayerFactory.createRandyBot(saveData.botColor);
             }

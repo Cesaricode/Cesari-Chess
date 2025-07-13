@@ -202,6 +202,7 @@ export class GameController {
         }
 
         this.updateSaveGameState();
+        await new Promise(resolve => setTimeout(resolve, 10));
         await this.tryBotMove();
     }
 
