@@ -325,8 +325,8 @@ select#promote:focus {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 22px;
-    height: 22px;
+    width: 25%;
+    height: 25%;
     background: var(--color-highlight);
     border-radius: 50%;
     transform: translate(-50%, -50%);
@@ -340,8 +340,8 @@ select#promote:focus {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 90px;
-    height: 90px;
+    width: 112.5%;
+    height: 112.5%;
     border: 12px solid var(--color-highlight);
     border-radius: 50%;
     transform: translate(-50%, -50%);
@@ -384,8 +384,8 @@ select#promote:focus {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 77px;
-    height: 77px;
+    width: 96%;
+    height: 96%;
     background: radial-gradient(circle,
             var(--color-check-highlight, rgba(255, 0, 0, 0.45)) 40%,
             rgba(255, 0, 0, 0.18) 70%,
@@ -560,9 +560,7 @@ select#promote:focus {
     border-color: #1b5e20 !important;
 }
 
-
 @media (max-width: 1400px) {
-
     .square img {
         width: 75%;
         height: auto;
@@ -662,6 +660,7 @@ select#promote:focus {
 
     .home-btn {
         font-size: 0;
+        padding-left: 18px;
     }
 }
 
@@ -689,6 +688,11 @@ select#promote:focus {
     #topBar {
         padding: 12px 0 0 0;
     }
+
+    .home-btn {
+        font-size: 0;
+        padding-left: 18px;
+    }
 }
 
 @media (max-width: 620px) {
@@ -699,10 +703,7 @@ select#promote:focus {
         height: 50px;
         font-size: 0;
         margin-right: 0;
-    }
-
-    .home-btn img {
-        width: 100px
+        padding: 2px 2px 2px 4px;
     }
 }
 
@@ -721,5 +722,10 @@ select#promote:focus {
     .button {
         padding: 6px 0;
         font-size: 0.88em;
+    }
+
+    .home-btn {
+        font-size: 0;
+        padding: 2px 2px 2px 4px;
     }
 }
