@@ -65,6 +65,7 @@ export class HistoryEventManager {
         btn.onblur = stop;
         btn.oncontextmenu = stop;
         btn.ontouchstart = (e) => {
+            e.preventDefault();
             touchInProgress = true;
             longPress = false;
             timeout = window.setTimeout(() => {
@@ -73,12 +74,14 @@ export class HistoryEventManager {
             }, 400);
         };
         btn.ontouchend = (e) => {
+            e.preventDefault();
             if (!longPress)
                 action();
             stop();
             setTimeout(() => { touchInProgress = false; }, 100);
         };
-        btn.ontouchcancel = () => {
+        btn.ontouchcancel = (e) => {
+            e.preventDefault();
             stop();
             setTimeout(() => { touchInProgress = false; }, 100);
         };
