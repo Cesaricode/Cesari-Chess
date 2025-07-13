@@ -629,7 +629,7 @@ select#promote:focus {
     #controls {
         width: 50%;
         min-width: 0;
-        margin: 0 auto 12px auto;
+        margin: 16px auto 12px auto;
         box-sizing: border-box;
         padding: 12px 6px 10px 6px;
         font-size: 1em;
